@@ -4,7 +4,7 @@
 The `mycobot_client` package enables users to connect and control the MyCobot 280 Pi via ROS (Robot Operating System). This guide will walk you through the installation and setup process.
     
 ## Prerequisites
-Before installing `mycobot_client`, you need to have Mamba installed on your system. Mamba is a fast, flexible, and user-friendly package manager. If you don't have Mamba installed, follow the installation instructions available [here](https://mamba.readthedocs.io/en/latest/installation.html).
+Before installing `mycobot_client`, you need to have Mamba installed on your system. Mamba is a fast, flexible, and user-friendly package manager. If you don't have Mamba installed, follow the installation instructions available [here](https://github.com/conda-forge/miniforge).
     
 ## Installation
     
