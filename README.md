@@ -1,4 +1,3 @@
-    ```
     # myrobot_client
     
     The `myrobot_client` package enables users to connect and control the MyCobot 280 Pi via ROS (Robot Operating System). This guide will walk you through the installation and setup process.
@@ -89,5 +88,5 @@
     ## License
     
     This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-    ```
+
 
