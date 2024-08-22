@@ -1,6 +1,6 @@
-    # myrobot_client
+    # mycobot_client
     
-    The `myrobot_client` package enables users to connect and control the MyCobot 280 Pi via ROS (Robot Operating System). This guide will walk you through the installation and setup process.
+    The `mycobot_client` package enables users to connect and control the MyCobot 280 Pi via ROS (Robot Operating System). This guide will walk you through the installation and setup process.
     
     ## Prerequisites
     
@@ -32,7 +32,7 @@
     Activate the newly created environment with Mamba:
     
     ```
-    conda activate myrobot_env
+    conda activate mycobot_env
     ```
     
     ### Step 4: Create a ROS Workspace
@@ -40,14 +40,14 @@
     Create a ROS workspace (if you do not already have one) and navigate into it:
     
     ```
-    mkdir -p ~/myrobot_ws/src
-    cd ~/myrobot_ws/src
+    mkdir -p ~/mycobot_ws/src
+    cd ~/mycobot_ws/src
     ```
     
     Clone any necessary ROS packages here, and then return to the workspace root:
     
     ```
-    cd ~/myrobot_ws
+    cd ~/mycobot_ws
     ```
     
     ### Step 5: Build the Workspace
