@@ -97,8 +97,8 @@ class MyCobotClient:
 
     def main(self):
         max_angle = 50
-        cur_counter = 0
-        counter_incr = (1/2) * math.pi / 180
+        cur_counter = 0.0
+        counter_incr = (1) * math.pi / 180
         joint_tol = 2
         speed = 80
         joint_idx = 0
