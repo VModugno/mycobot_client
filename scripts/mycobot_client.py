@@ -102,7 +102,7 @@ class MyCobotClient:
         joint_tol = 2
         speed = 80
         joint_idx = 0
-        SLP_TIME = 0.01
+        SLP_TIME = 0.5
         while not rospy.is_shutdown():
             joint_msg = MycobotSetAngles()
             joint_msg.speed = speed
