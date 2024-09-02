@@ -73,6 +73,7 @@ class CurGripperState:
 
 class MyCobotClient:
     def __init__(self):
+        rospy.init_node('mycobot_client')
         self.real_angle_sub = rospy.Subscriber(
             COBOT_JOIN_REAL_TOPIC, MycobotAngles, self.real_angle_cb)
         self.cmd_angle_pub = rospy.Publisher(
