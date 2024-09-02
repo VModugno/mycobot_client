@@ -54,9 +54,10 @@ mkdir -p ~/mycobot_ws/src
 cd ~/mycobot_ws/src
 ```
 
-Clone the mycobot client repository and any other nescessary ROS packages to this workspace:
+Clone the mycobot client repository and other nescessary ROS packages to this workspace:
 ```
 git clone https://github.com/VModugno/mycobot_client
+git clone https://github.com/VModugno/mycobot_communications.git  .
 ```
     
 Then return to the workspace root:
