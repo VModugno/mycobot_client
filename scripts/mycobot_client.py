@@ -98,11 +98,11 @@ class MyCobotClient:
     def main(self):
         max_angle = 50
         cur_counter = 0
-        counter_incr = math.pi / 16
+        counter_incr = (1/2) * math.pi / 180
         joint_tol = 2
         speed = 80
         joint_idx = 0
-        SLP_TIME = 0.5
+        SLP_TIME = 0.01
         while not rospy.is_shutdown():
             joint_msg = MycobotSetAngles()
             joint_msg.speed = speed
