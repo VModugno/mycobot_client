@@ -37,7 +37,7 @@ class CurRealAngles:
         joint_str = "joint_"
         debug_str = ""
         for i in range(len(self.angles)):
-            debug_str += joint_str + str(i) + ": " + str(self.angles[i]) + "\n"
+            debug_str += joint_str + str(i + 1) + ": " + str(self.angles[i]) + "\n"
         debug_str = debug_str[:-1]
         return debug_str
 
@@ -111,8 +111,9 @@ class MyCobotClient:
 
             cur_counter += counter_incr
             self.cmd_angle_pub.publish(joint_msg)
-            while not rospy.is_shutdown() and len(self.cur_real_angles.angles) == NUM_JOINTS and (abs(self.cur_real_angles.angles[joint_idx] - goal_angle_degrees) < joint_tol):
-                time.sleep(SLP_TIME)
+            time.sleep(SLP_TIME)
+            # while not rospy.is_shutdown() and len(self.cur_real_angles.angles) == NUM_JOINTS and (abs(self.cur_real_angles.angles[joint_idx] - goal_angle_degrees) < joint_tol):
+            #     time.sleep(SLP_TIME)
 
 if __name__ == '__main__':
     try:
