@@ -92,7 +92,7 @@ class MyCobotClient:
         angles[4] = msg.joint_5
         angles[5] = msg.joint_6
         self.cur_real_angles = CurRealAngles(angles)
-        print(self.cur_real_angles)
+        # print(self.cur_real_angles)
 
 
     def main(self):
@@ -110,6 +110,7 @@ class MyCobotClient:
             joint_msg.joint_1 = goal_angle_degrees
 
             cur_counter += counter_incr
+            print(joint_msg)
             self.cmd_angle_pub.publish(joint_msg)
             time.sleep(SLP_TIME)
             # while not rospy.is_shutdown() and len(self.cur_real_angles.angles) == NUM_JOINTS and (abs(self.cur_real_angles.angles[joint_idx] - goal_angle_degrees) < joint_tol):
