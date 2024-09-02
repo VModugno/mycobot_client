@@ -49,19 +49,6 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
-## Generate messages in the 'msg' folder
-add_message_files(FILES
-  MycobotAngles.msg
-  MycobotCoords.msg
-  MycobotSetAngles.msg
-  MycobotSetCoords.msg
-  MycobotGripperStatus.msg
-  MycobotPumpStatus.msg
-)
-
-## Generate added messages and services
-generate_messages(DEPENDENCIES std_msgs)
-
 ## Generate actions in the 'action' folder
 # add_action_files(
 #   FILES
@@ -160,7 +147,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  scripts/test1.py
+  scripts/mycobot_client.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
