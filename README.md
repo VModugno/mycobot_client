@@ -4,7 +4,7 @@
 The `mycobot_client` package enables users to connect and control the MyCobot 280 Pi via ROS (Robot Operating System). This guide will walk you through the installation and setup process.
     
 ## Prerequisites
-You will need to use a computer with Ubuntu 20.04 installed, either via a VM (https://www.virtualbox.org/), Windows Subsystem for Linux (https://learn.microsoft.com/en-us/windows/wsl/install), or Docker (https://docs.docker.com/desktop/install/windows-install/). You will also need build-essentials and cmake installed (`sudo apt-get update && sudo apt-get install build-essential cmake`)  
+You will need to use a computer with Ubuntu 20.04 installed, ideally via a VM (https://www.virtualbox.org/). We tested WSL and docker installed in WSL and it didn't work so well. You will also need build-essentials and cmake installed (`sudo apt-get update && sudo apt-get install build-essential cmake`)  
 
 Before installing `mycobot_client`, you need to have Mamba installed on your system. Mamba is a fast, flexible, and user-friendly package manager. If you don't have Mamba installed, follow the installation instructions available [here](https://github.com/conda-forge/miniforge).  
 
@@ -57,7 +57,7 @@ cd ~/mycobot_ws/src
 Clone the mycobot client repository and other nescessary ROS packages to this workspace:
 ```
 git clone https://github.com/VModugno/mycobot_client
-git clone https://github.com/VModugno/mycobot_communications.git  .
+git clone https://github.com/VModugno/mycobot_communications.git  
 ```
     
 Then return to the workspace root:
