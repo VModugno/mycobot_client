@@ -13,7 +13,7 @@ from mycobot_msgs.msg import (
 )
 
 COBOT_JOINT_GOAL_TOPIC = "mycobot/angles_goal"
-COBOT_JOIN_REAL_TOPIC = "mycobot/angles_real"
+COBOT_JOINT_REAL_TOPIC = "mycobot/angles_real"
 COBOT_GRIPPER_STATUS_TOPIC = "mycobot/gripper_status"
 COBOT_PUMP_STATUS_TOPIC = "mycobot/pump_status"
 COBOT_END_EFFECTOR_COORDS_TOPIC = "mycobot/coords_real"
@@ -75,7 +75,7 @@ class MyCobotClient:
     def __init__(self):
         rospy.init_node('mycobot_client')
         self.real_angle_sub = rospy.Subscriber(
-            COBOT_JOIN_REAL_TOPIC, MycobotAngles, self.real_angle_cb)
+            COBOT_JOINT_REAL_TOPIC, MycobotAngles, self.real_angle_cb)
         self.cmd_angle_pub = rospy.Publisher(
             COBOT_JOINT_GOAL_TOPIC, MycobotSetAngles, queue_size=1)
         self.gripper_status_pub = rospy.Publisher(
