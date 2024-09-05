@@ -91,6 +91,7 @@ class MycobotClient(Node):
         joint_msg.speed = self.speed
         goal_angle_degrees = math.sin(self.cur_counter) * self.max_angle
         joint_msg.joint_1 = goal_angle_degrees
+        self.get_logger().info(joint_msg)
         self.cur_counter += self.counter_incr
         self.cmd_angle_pub.publish(joint_msg)
 
