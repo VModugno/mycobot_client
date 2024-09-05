@@ -71,7 +71,7 @@ class MycobotClient(Node):
         self.declare_parameter('pub_cmd_timer', 100)
 
         self.get_logger().info("start ...")
-        timer_hz = self.get_parameter('pub_real_coords_timer').value
+        timer_hz = self.get_parameter('pub_cmd_timer').value
         self.get_logger().info("Params: %s" % (timer_hz))
 
 
