@@ -11,9 +11,6 @@ from mycobot_msgs_2.msg import (
     MycobotPumpStatus,
 )
 
-from pymycobot.mycobot import MyCobot
-from pymycobot.error import MyCobotDataException
-
 COBOT_JOINT_GOAL_TOPIC = "mycobot/angles_goal"
 COBOT_JOIN_REAL_TOPIC = "mycobot/angles_real"
 COBOT_GRIPPER_STATUS_TOPIC = "mycobot/gripper_status"
