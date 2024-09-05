@@ -1,5 +1,6 @@
 from setuptools import setup
 
+package_name = 'mycobot_client_2'
 
 setup(
     name=package_name,
