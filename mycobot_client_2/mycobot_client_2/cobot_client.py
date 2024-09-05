@@ -68,7 +68,7 @@ class MycobotClient(Node):
     def __init__(self):
         super().__init__('mycobot_client')
 
-        self.declare_parameter('pub_cmd_timer', 100)
+        self.declare_parameter('pub_cmd_timer', 0.01)
 
         self.get_logger().info("start ...")
         timer_hz = self.get_parameter('pub_cmd_timer').value
@@ -80,7 +80,7 @@ class MycobotClient(Node):
         self.timer_cmd_angles = self.create_timer(timer_hz,
                  self.publish_cmd_angles)
 
-        self.ax_angle = 50
+        self.max_angle = 50
         self.cur_counter = 0.0
         self.counter_incr = (1) * math.pi / 180
         self.speed = 80
@@ -91,7 +91,7 @@ class MycobotClient(Node):
         joint_msg.speed = self.speed
         goal_angle_degrees = math.sin(self.cur_counter) * self.max_angle
         joint_msg.joint_1 = goal_angle_degrees
-        self.get_logger().info(joint_msg)
+        self.get_logger().debug(joint_msg)
         self.cur_counter += self.counter_incr
         self.cmd_angle_pub.publish(joint_msg)
 
