@@ -25,7 +25,7 @@ class CurRealAngles:
         self.angles = angles
 
     def __eq__(self, other):
-        if isinstance(other, CurAngles):
+        if isinstance(other, CurRealAngles):
             return self.angles == other.angles
         return False
 
