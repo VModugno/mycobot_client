@@ -81,16 +81,21 @@ class MycobotClient(Node):
                  self.publish_cmd_angles)
 
         self.max_angle = 50
-        self.cur_counter = 0.0
-        self.counter_incr = (1) * math.pi / 180
+        self.cur_counter = 0
+        self.counter_incr = 1
         self.speed = 80
         self.joint_idx = 0
     
     def publish_cmd_angles(self):
         joint_msg = MycobotSetAngles()
         joint_msg.speed = self.speed
-        goal_angle_degrees = math.sin(self.cur_counter) * self.max_angle
+        goal_angle_degrees = math.sin(self.cur_counter * math.pi / 180) * self.max_angle
         joint_msg.joint_1 = goal_angle_degrees
+        joint_msg.joint_2 = goal_angle_degrees
+        joint_msg.joint_3 = goal_angle_degrees
+        joint_msg.joint_4 = goal_angle_degrees
+        joint_msg.joint_5 = goal_angle_degrees
+        joint_msg.joint_6 = goal_angle_degrees
         self.get_logger().debug(joint_msg)
         self.cur_counter += self.counter_incr
         self.cmd_angle_pub.publish(joint_msg)
