@@ -48,21 +48,6 @@ class CurGripperState:
         return not self.__eq__(other)
 
 
-class CurPumpStatus:
-    def __init__(self, state, pin_1, pin_2):
-        self.state = state
-        self.pin_1 = pin_1
-        self.pin_2 = pin_2
-
-    def __eq__(self, other):
-        if isinstance(other, CurPumpStatus):
-            return self.state == other.state and self.pin_1 == other.pin_1 and self.pin_2 == other.pin_2
-        return False
-
-    def __ne__(self, other):
-        # needed in python 2
-        return not self.__eq__(other)
-
 class MycobotClient(Node):
 
     def __init__(self):
@@ -74,11 +59,10 @@ class MycobotClient(Node):
         timer_hz = self.get_parameter('pub_cmd_timer').value
         self.get_logger().info("Params: %s" % (timer_hz))
 
-
         self.cmd_angle_pub = self.create_publisher(MycobotSetAngles, COBOT_JOINT_GOAL_TOPIC, 1)
 
         self.timer_cmd_angles = self.create_timer(timer_hz,
-                 self.publish_cmd_angles)
+                 self.move_joints)
 
         self.max_angle = 50
         self.cur_counter = 0
@@ -86,7 +70,23 @@ class MycobotClient(Node):
         self.speed = 80
         self.joint_idx = 0
     
-    def publish_cmd_angles(self):
+    def publish_cmd_angles(self, cmd_angles: CurAngles):
+        joint_msg = MycobotSetAngles()
+        joint_msg.speed = cmd_angles.speed
+        joint_msg.joint_1 = cmd_angles.angles[0]
+        joint_msg.joint_2 = cmd_angles.angles[1]
+        joint_msg.joint_3 = cmd_angles.angles[2]
+        joint_msg.joint_4 = cmd_angles.angles[3]
+        joint_msg.joint_5 = cmd_angles.angles[4]
+        joint_msg.joint_6 = cmd_angles.angles[5]
+        self.publish_cmd_angles_ros(joint_msg)
+    
+    def publish_cmd_angles_ros(self, cmd_msg: MycobotSetAngles):
+        self.get_logger().debug(cmd_msg)
+        self.cmd_angle_pub.publish(cmd_msg)
+
+    
+    def move_joints(self):
         joint_msg = MycobotSetAngles()
         joint_msg.speed = self.speed
         goal_angle_degrees = math.sin(self.cur_counter * math.pi / 180) * self.max_angle
@@ -96,9 +96,8 @@ class MycobotClient(Node):
         joint_msg.joint_4 = goal_angle_degrees
         joint_msg.joint_5 = goal_angle_degrees
         joint_msg.joint_6 = goal_angle_degrees
-        self.get_logger().debug(joint_msg)
         self.cur_counter += self.counter_incr
-        self.cmd_angle_pub.publish(joint_msg)
+        self.publish_cmd_angles_ros(joint_msg)
 
 def main(args=None):
     rclpy.init(args=args)
