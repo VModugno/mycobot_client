@@ -1,5 +1,8 @@
 # mycobot_client
 
+## ros1
+Checkout the branch `ros-noetic-1.0.0`.
+
 ## ros2
 
 For this, ensure that the robot arm is running and connected to the same network.
