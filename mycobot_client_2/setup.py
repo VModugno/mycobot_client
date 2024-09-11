@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'cobot_client = mycobot_client_2.cobot_client:main'
+            'cobot_client = mycobot_client_2.cobot_client:main',
+            'cobot_ik = mycobot_client_2.ik:main'
         ],
     },
 )
