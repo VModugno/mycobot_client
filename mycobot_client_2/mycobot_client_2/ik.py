@@ -25,6 +25,7 @@ def main():
 
     # use ComputeJacobian(self,q0,frame_name,local_or_global)
     # to get jacobian, and numerical solver from allesandro's slides
+    
 
     # Display dynamics information
     print("Joint info simulator:")
