@@ -3,6 +3,7 @@ from mycobot_client_2.cobot_client import MycobotClient, CurAngles
 import numpy as np
 import time
 import os
+from ament_index_python.packages import get_package_share_directory
 import simulation_and_control as sac
 from simulation_and_control.sim import pybullet_robot_interface as pb
 from simulation_and_control.controllers.servo_motor import MotorCommands
@@ -10,8 +11,10 @@ from simulation_and_control.controllers.pin_wrapper import PinWrapper
 
 def main():
     # Configuration for the simulation
+    package_share_directory = get_package_share_directory('mycobot_client_2')
     conf_file_name = "elephantconfig.json"  # Configuration file for the robot
-    dir_with_configs = os.path.dirname(os.path.join(os.path.abspath(__file__), ".."))
+    print(package_share_directory)
+    dir_with_configs = package_share_directory
     sim = pb.SimInterface(conf_file_name, conf_file_path_ext = dir_with_configs)  # Initialize simulation interface
 
     # Get active joint names from the simulation
