@@ -71,7 +71,7 @@ class CobotIK(Node):
         while np.linalg.norm(q_k_plus_one - q_k) > 0.5:
             q_k = np.copy(q_k_plus_one)
             jacobian = self.dyn_model.ComputeJacobian(q_k, end_effector_frame, local_or_global).J
-            trimmed_jacobian = np.copy(np.transpose(jacobian[0:3, :]))
+            trimmed_jacobian = np.copy(jacobian[0:3, :])
             self.get_logger().info("jacobian")
             self.get_logger().info(np.array_str(jacobian))
             position, orientation = self.dyn_model.ComputeFK(q_k, end_effector_frame)
