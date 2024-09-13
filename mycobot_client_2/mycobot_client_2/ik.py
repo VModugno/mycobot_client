@@ -33,7 +33,8 @@ class CobotIK(Node):
             self.set_pose,
             1)
 
-        self.declare_parameter('max_iterations', 100)
+        self.declare_parameter('max_iterations', 500)
+        self.declare_parameter('solution_tol', 0.1)
 
         self.get_logger().info("start ...")
         
@@ -88,14 +89,18 @@ class CobotIK(Node):
             self.get_logger().info(f"{q_k.shape} + {inverted_j.shape} @ ({target_pose.shape} - {position.shape})")
             q_k_plus_one = q_k + np.linalg.pinv(trimmed_jacobian) @ (target_pose - position)
             num_iterations += 1
-            success = np.linalg.norm(q_k_plus_one - q_k) < 0.5
+            success = np.linalg.norm(q_k_plus_one - q_k) < self.get_parameter('solution_tol').value
         if not success:
             self.get_logger().error(f"could not solve for solution in {self.get_parameter('max_iterations').value} iterations")
             return
         else:
-            pass
-        self.get_logger().info(f"found solution in {num_iterations} iterations")
-        self.get_logger().info(np.array_str(q_k_plus_one))
+            self.get_logger().info(f"found solution in {num_iterations} iterations")
+            self.get_logger().info(np.array_str(q_k_plus_one))
+
+            self.get_logger().info(f"forward kinematics with the solution results in:")
+            position, orientation = self.dyn_model.ComputeFK(q_k_plus_one, end_effector_frame)
+            self.get_logger().info(np.array_str(position))
+
 
         new_joint_msg = MycobotSetAngles()
         new_joint_msg.joint_1 = q_k_plus_one[0]
