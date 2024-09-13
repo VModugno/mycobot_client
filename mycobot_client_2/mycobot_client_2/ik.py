@@ -24,11 +24,7 @@ def main():
     source_names = ["pybullet"]  # Define the source for dynamic modeling
 
     # Create a dynamic model of the robot
-    dyn_model = PinWrapper(conf_file_name, "pybullet", ext_names, source_names, False,0, dir_with_configs)
-
-    # use ComputeJacobian(self,q0,frame_name,local_or_global)
-    # to get jacobian, and numerical solver from allesandro's slides
-    
+    dyn_model = PinWrapper(conf_file_name, "pybullet", ext_names, source_names, False,0, dir_with_configs)  
 
     # Display dynamics information
     print("Joint info simulator:")
@@ -39,6 +35,27 @@ def main():
 
     print("Link info pinocchio:")
     dyn_model.getDynamicsInfo()
+
+    q_k = np.array([0, 0, 0, 0, 0, 0])
+    end_effector_frame = "joint_6"
+    local_or_global = "local_global"
+    q_k_plus_one = np.copy(q_k)
+    q_k_plus_one[:] = 99
+    target_pose = np.array([0.2, -0.1, 0, 0, 0, 0])
+    num_iterations = 0
+    while np.linalg.norm(q_k_plus_one - q_k) > 0.5:
+        q_k = np.copy(q_k_plus_one)
+        jacobian = dyn_model.ComputeJacobian(q_k, end_effector_frame, local_or_global)
+        pose_at_k = dyn_model.ComputeFK(q_k, end_effector_frame)
+        q_k_plus_one = q_k + np.linalg.inv(jacobian) @ (target_pose - pose_at_k)
+        num_iterations += 1
+    print(f"found solution in {num_iterations} iterations")
+    print(q_k_plus_one)
+    
+    # use ComputeJacobian(self,q0,frame_name,local_or_global)
+    # to get jacobian, and numerical solver from allesandro's slides
+
+    # joint6
 
     # Command and control loop
     # cmd = MotorCommands()  # Initialize command structure for motors
