@@ -78,15 +78,15 @@ class CobotIK(Node):
             q_k = np.copy(q_k_plus_one)
             jacobian = self.dyn_model.ComputeJacobian(q_k, end_effector_frame, local_or_global).J
             trimmed_jacobian = np.copy(jacobian[0:3, :])
-            self.get_logger().info("jacobian")
-            self.get_logger().info(np.array_str(jacobian))
+            self.get_logger().debug("jacobian")
+            self.get_logger().debug(np.array_str(jacobian))
             position, orientation = self.dyn_model.ComputeFK(q_k, end_effector_frame)
-            self.get_logger().info("position at k")
-            self.get_logger().info(np.array_str(position))
-            self.get_logger().info("orientation at k")
-            self.get_logger().info(np.array_str(orientation))
+            self.get_logger().debug("position at k")
+            self.get_logger().debug(np.array_str(position))
+            self.get_logger().debug("orientation at k")
+            self.get_logger().debug(np.array_str(orientation))
             inverted_j = np.linalg.pinv(trimmed_jacobian)
-            self.get_logger().info(f"{q_k.shape} + {inverted_j.shape} @ ({target_pose.shape} - {position.shape})")
+            self.get_logger().debug(f"{q_k.shape} + {inverted_j.shape} @ ({target_pose.shape} - {position.shape})")
             q_k_plus_one = q_k + np.linalg.pinv(trimmed_jacobian) @ (target_pose - position)
             num_iterations += 1
             success = np.linalg.norm(q_k_plus_one - q_k) < self.get_parameter('solution_tol').value
