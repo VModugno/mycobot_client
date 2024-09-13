@@ -12,7 +12,7 @@ RUN git clone -b client-examples https://github.com/VModugno/mycobot_client
 RUN git clone -b ros2-seperating https://github.com/VModugno/mycobot_communications
 
 COPY ./simulation_and_control-0.1-py3-none-any.whl /tmp/simulation_and_control-0.1-py3-none-any.whl
-RUN apt install python3-pip
+RUN apt install python3-pip -y
 RUN pip install /tmp/simulation_and_control-0.1-py3-none-any.whl
 
 WORKDIR /workspace
