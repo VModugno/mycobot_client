@@ -1,4 +1,6 @@
-FROM ros:humble as base
+FROM osrf/ros:humble-desktop
+
+# xhost +local:root; sudo docker run -it --network host --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" test-humble-pinocchio; xhost -local:root;
 
 RUN apt update && apt install -y ros-humble-pinocchio
 
