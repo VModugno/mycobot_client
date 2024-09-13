@@ -72,7 +72,8 @@ class CobotIK(Node):
         self.get_logger().info("target pose")
         self.get_logger().info(np.array_str(target_pose))
         num_iterations = 0
-        while num_iterations < self.get_parameter('max_iterations').value and np.linalg.norm(q_k_plus_one - q_k) > 0.5:
+        success = False
+        while num_iterations < self.get_parameter('max_iterations').value and not success:
             q_k = np.copy(q_k_plus_one)
             jacobian = self.dyn_model.ComputeJacobian(q_k, end_effector_frame, local_or_global).J
             trimmed_jacobian = np.copy(jacobian[0:3, :])
@@ -87,6 +88,12 @@ class CobotIK(Node):
             self.get_logger().info(f"{q_k.shape} + {inverted_j.shape} @ ({target_pose.shape} - {position.shape})")
             q_k_plus_one = q_k + np.linalg.pinv(trimmed_jacobian) @ (target_pose - position)
             num_iterations += 1
+            success = np.linalg.norm(q_k_plus_one - q_k) > 0.5
+        if not success:
+            self.get_logger().error(f"could not solve for solution in {self.get_parameter('max_iterations').value} iterations")
+            return
+        else:
+            pass
         self.get_logger().info(f"found solution in {num_iterations} iterations")
         self.get_logger().info(np.array_str(q_k_plus_one))
 
