@@ -38,7 +38,7 @@ setup(
     name=package_name,
     version='0.0.1',
     packages=[package_name],
-    data_files=package_files(data_files, ['models/', 'configs/']),
+    data_files=package_files(data_files, ['models/', 'configs/', 'launch/']),
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='Valerio',
