@@ -45,8 +45,7 @@ class CobotIK(Node):
         self.ext_names = np.expand_dims(np.array(self.ext_names), axis=0)  # Adjust the shape for compatibility
 
         # Create a dynamic model of the robot
-        self.dyn_model = PinWrapper(self.conf_file_name, "pybullet", self.ext_names, self.source_names, False, 0, self.package_share_directory)  
-
+        self.dyn_model = PinWrapper(self.conf_file_name, "pybullet", self.ext_names, self.source_names, False, 0, self.package_share_directory)
         # Display dynamics information
         self.get_logger().info("Joint info simulator:")
         self.get_logger().info(self.sim.GetBotJointsInfo())
