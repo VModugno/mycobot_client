@@ -60,22 +60,25 @@ class CobotIK(Node):
 
     
     def set_pose(self, msg):
-        q_k = np.array([msg.x, msg.y, msg.z, 0, 0, 0])
+        q_k = np.array([0, 0, 0, 0, 0, 0])
         end_effector_frame = "joint6_flange"
         local_or_global = "local_global"
         q_k_plus_one = np.copy(q_k)
         q_k_plus_one[:] = 99
-        target_pose = np.array([0.2, -0.1, 0, 0, 0, 0])
+        target_pose = np.array([msg.x, msg.y, msg.z])
         num_iterations = 0
         while np.linalg.norm(q_k_plus_one - q_k) > 0.5:
             q_k = np.copy(q_k_plus_one)
             jacobian = self.dyn_model.ComputeJacobian(q_k, end_effector_frame, local_or_global).J
+            trimmed_jacobian = np.copy(np.transpose(jacobian[0:3, :]))
             self.get_logger().info("jacobian")
             self.get_logger().info(jacobian)
-            pose_at_k = self.dyn_model.ComputeFK(q_k, end_effector_frame)
-            self.get_logger().info("pose at k")
-            self.get_logger().info(pose_at_k)
-            q_k_plus_one = q_k + np.linalg.inv(jacobian) @ (target_pose - pose_at_k)
+            position, orientation = self.dyn_model.ComputeFK(q_k, end_effector_frame)
+            self.get_logger().info("position at k")
+            self.get_logger().info(position)
+            self.get_logger().info("orientation at k")
+            self.get_logger().info(orientation)
+            q_k_plus_one = q_k + np.linalg.inv(trimmed_jacobian) @ (target_pose - position)
             num_iterations += 1
         self.get_logger().info(f"found solution in {num_iterations} iterations")
         self.get_logger().info(q_k_plus_one)
