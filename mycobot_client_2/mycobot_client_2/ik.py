@@ -79,6 +79,8 @@ class CobotIK(Node):
             self.get_logger().info(np.array_str(position))
             self.get_logger().info("orientation at k")
             self.get_logger().info(np.array_str(orientation))
+            inverted_j = np.linalg.pinv(trimmed_jacobian)
+            self.get_logger().info(f"{q_k.shape} + {inverted_j.shape} @ ({target_pose.shape} - {position.shape})")
             q_k_plus_one = q_k + np.linalg.pinv(trimmed_jacobian) @ (target_pose - position)
             num_iterations += 1
         self.get_logger().info(f"found solution in {num_iterations} iterations")
