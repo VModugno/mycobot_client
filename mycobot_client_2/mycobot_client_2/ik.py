@@ -32,6 +32,10 @@ class CobotIK(Node):
             COBOT_POSE_GOAL_TOPIC,
             self.set_pose,
             1)
+
+        self.declare_parameter('max_iterations', 100)
+
+        self.get_logger().info("start ...")
         
         self.package_share_directory = get_package_share_directory('mycobot_client_2')
         self.conf_file_name = "elephantconfig.json"  # Configuration file for the robot
@@ -68,7 +72,7 @@ class CobotIK(Node):
         self.get_logger().info("target pose")
         self.get_logger().info(np.array_str(target_pose))
         num_iterations = 0
-        while np.linalg.norm(q_k_plus_one - q_k) > 0.5:
+        while num_iterations < self.get_parameter('max_iterations').value and np.linalg.norm(q_k_plus_one - q_k) > 0.5:
             q_k = np.copy(q_k_plus_one)
             jacobian = self.dyn_model.ComputeJacobian(q_k, end_effector_frame, local_or_global).J
             trimmed_jacobian = np.copy(jacobian[0:3, :])
