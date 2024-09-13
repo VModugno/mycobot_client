@@ -88,7 +88,7 @@ class CobotIK(Node):
             self.get_logger().info(f"{q_k.shape} + {inverted_j.shape} @ ({target_pose.shape} - {position.shape})")
             q_k_plus_one = q_k + np.linalg.pinv(trimmed_jacobian) @ (target_pose - position)
             num_iterations += 1
-            success = np.linalg.norm(q_k_plus_one - q_k) > 0.5
+            success = np.linalg.norm(q_k_plus_one - q_k) < 0.5
         if not success:
             self.get_logger().error(f"could not solve for solution in {self.get_parameter('max_iterations').value} iterations")
             return
