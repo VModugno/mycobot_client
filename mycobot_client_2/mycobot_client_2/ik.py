@@ -150,7 +150,7 @@ class CobotIK(Node):
         ori_des_quat = ori_des_quat.normalize()
 
         p_des = np.array([msg.x, msg.y, msg.z])
-        
+
         self.get_logger().info("position target")
         self.get_logger().info(np.array_str(p_des))
         self.get_logger().info("orientation target")
@@ -216,6 +216,8 @@ class CobotIK(Node):
             self.get_logger().info(np.array_str(position))
             self.get_logger().info("orientation:")
             self.get_logger().info(np.array_str(pin.rpy.matrixToRpy(orientation)))
+            self.get_logger().info("error:")
+            self.get_logger().info(np.array_str(cur_error))
 
         adjusted_angles = self.adjust_angles(q_k_plus_one)
         new_joint_msg = MycobotSetAngles()
