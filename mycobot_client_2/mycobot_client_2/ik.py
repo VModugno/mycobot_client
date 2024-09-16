@@ -21,6 +21,15 @@ COBOT_POSE_GOAL_TOPIC = "mycobot/pose_goal"
 COBOT_GRIPPER_STATUS_TOPIC = "mycobot/gripper_status"
 
 RADIAN_TO_DEGREES = (1/np.pi) * 180
+# the joints have the below min/maxes (from https://www.elephantrobotics.com/en/mycobot-280-pi-2023-specifications/)
+# J1 -165 ~ +165 
+# J2 -165 ~ +165
+# J3 -165 ~ +165 
+# J4 -165 ~ +165 
+# J5 -165 ~ +165
+# J6 -179 ~ +179
+JOINT_LIMITS = [[-165, 165], [-165, 165], [-165, 165], [-165, 165], [-165, 165], [-179, 179]]
+
 
 class CobotIK(Node):
     def __init__(self):
@@ -64,6 +73,30 @@ class CobotIK(Node):
         self.get_logger().info("Link info pinocchio:")
         self.get_logger().info(self.dyn_model.getDynamicsInfo())
 
+    def adjust_angles(self, target_angles):
+        new_angles = np.copy(target_angles)
+        for i in range(new_angles.shape[0]):
+            angle_degrees = RADIAN_TO_DEGREES * target_angles[i]
+            angle_degrees_bounded = angle_degrees % 360
+
+            if angle_degrees_bounded < 0:
+                angle_degrees_bounded = 360 - (angle_degrees_bounded * (-1))
+
+            if angle_degrees_bounded > 180:
+                angle_degrees_wrapped = 360 - angle_degrees_wrapped
+                angle_degrees_wrapped *= -1
+            else:
+                angle_degrees_wrapped = angle_degrees_bounded
+            joint_min, joint_max = JOINT_LIMITS[i]
+
+            if angle_degrees_wrapped < joint_min:
+                self.get_logger().error(f"joint_index {i} had angle {angle_degrees_wrapped}, min {joint_min}, bounding it.")
+                angle_degrees_wrapped = joint_min
+            if angle_degrees_wrapped > joint_max:
+                self.get_logger().error(f"joint_index {i} had angle {angle_degrees_wrapped}, max {joint_max}, bounding it.")
+                angle_degrees_wrapped = joint_max
+            new_angles[i] = angle_degrees_wrapped
+        return new_angles
 
     
     def set_pose(self, msg):
@@ -105,14 +138,17 @@ class CobotIK(Node):
             position, orientation = self.dyn_model.ComputeFK(q_k_plus_one, end_effector_frame)
             self.get_logger().info(np.array_str(position))
 
+        adjusted_angles = self.adjust_angles(q_k_plus_one)
+
+
 
         new_joint_msg = MycobotSetAngles()
-        new_joint_msg.joint_1 = (q_k_plus_one[0] * RADIAN_TO_DEGREES) % 360
-        new_joint_msg.joint_2 = (q_k_plus_one[1] * RADIAN_TO_DEGREES) % 360
-        new_joint_msg.joint_3 = (q_k_plus_one[2] * RADIAN_TO_DEGREES) % 360
-        new_joint_msg.joint_4 = (q_k_plus_one[3] * RADIAN_TO_DEGREES) % 360
-        new_joint_msg.joint_5 = (q_k_plus_one[4] * RADIAN_TO_DEGREES) % 360
-        new_joint_msg.joint_6 = (q_k_plus_one[5] * RADIAN_TO_DEGREES) % 360
+        new_joint_msg.joint_1 = adjusted_angles[0]
+        new_joint_msg.joint_2 = adjusted_angles[1]
+        new_joint_msg.joint_3 = adjusted_angles[2]
+        new_joint_msg.joint_4 = adjusted_angles[3]
+        new_joint_msg.joint_5 = adjusted_angles[4]
+        new_joint_msg.joint_6 = adjusted_angles[5]
         new_joint_msg.speed = self.get_parameter('move_speed').value
 
         self.cmd_angle_pub.publish(new_joint_msg)
