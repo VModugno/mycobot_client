@@ -20,6 +20,8 @@ COBOT_JOINT_GOAL_TOPIC = "mycobot/angles_goal"
 COBOT_POSE_GOAL_TOPIC = "mycobot/pose_goal"
 COBOT_GRIPPER_STATUS_TOPIC = "mycobot/gripper_status"
 
+RADIAN_TO_DEGREES = (1/np.pi) * 180
+
 class CobotIK(Node):
     def __init__(self):
         super().__init__('mycobot_ik_client')
@@ -35,6 +37,7 @@ class CobotIK(Node):
 
         self.declare_parameter('max_iterations', 500)
         self.declare_parameter('solution_tol', 0.1)
+        self.declare_parameter('move_speed', 30)
 
         self.get_logger().info("start ...")
         
@@ -74,6 +77,7 @@ class CobotIK(Node):
         self.get_logger().info(np.array_str(target_pose))
         num_iterations = 0
         success = False
+        tolerance = self.get_parameter('solution_tol').value
         while num_iterations < self.get_parameter('max_iterations').value and not success:
             q_k = np.copy(q_k_plus_one)
             jacobian = self.dyn_model.ComputeJacobian(q_k, end_effector_frame, local_or_global).J
@@ -89,7 +93,7 @@ class CobotIK(Node):
             self.get_logger().debug(f"{q_k.shape} + {inverted_j.shape} @ ({target_pose.shape} - {position.shape})")
             q_k_plus_one = q_k + np.linalg.pinv(trimmed_jacobian) @ (target_pose - position)
             num_iterations += 1
-            success = np.linalg.norm(q_k_plus_one - q_k) < self.get_parameter('solution_tol').value
+            success = np.linalg.norm(q_k_plus_one - q_k) < tolerance
         if not success:
             self.get_logger().error(f"could not solve for solution in {self.get_parameter('max_iterations').value} iterations")
             return
@@ -103,13 +107,13 @@ class CobotIK(Node):
 
 
         new_joint_msg = MycobotSetAngles()
-        new_joint_msg.joint_1 = q_k_plus_one[0]
-        new_joint_msg.joint_2 = q_k_plus_one[1]
-        new_joint_msg.joint_3 = q_k_plus_one[2]
-        new_joint_msg.joint_4 = q_k_plus_one[3]
-        new_joint_msg.joint_5 = q_k_plus_one[4]
-        new_joint_msg.joint_6 = q_k_plus_one[5]
-        new_joint_msg.speed = 80
+        new_joint_msg.joint_1 = (q_k_plus_one[0] * RADIAN_TO_DEGREES) % 360
+        new_joint_msg.joint_2 = (q_k_plus_one[1] * RADIAN_TO_DEGREES) % 360
+        new_joint_msg.joint_3 = (q_k_plus_one[2] * RADIAN_TO_DEGREES) % 360
+        new_joint_msg.joint_4 = (q_k_plus_one[3] * RADIAN_TO_DEGREES) % 360
+        new_joint_msg.joint_5 = (q_k_plus_one[4] * RADIAN_TO_DEGREES) % 360
+        new_joint_msg.joint_6 = (q_k_plus_one[5] * RADIAN_TO_DEGREES) % 360
+        new_joint_msg.speed = self.get_parameter('move_speed').value
 
         self.cmd_angle_pub.publish(new_joint_msg)
 
