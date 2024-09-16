@@ -181,6 +181,20 @@
     </inertial>
   </link>
 
+  <link name="gripper">
+    <visual>
+      <geometry>
+       <cylinder length="0.3" radius="0.2"/>
+      </geometry>
+      <origin xyz = "0.0 0 -0.012 " rpy = " 0 0 0"/>
+    </visual>
+    <collision>
+      <geometry>
+       <cylinder length="0.3" radius="0.2"/>
+      </geometry>
+      <origin xyz = "0.0 0 -0.012 " rpy = " 0 0 0"/>
+    </collision>
+  </link>
 
   <joint name="g_base_to_joint1" type="fixed">
     <axis xyz="0 0 0"/>
@@ -243,7 +257,13 @@
     <origin xyz= "0 0.0456 0" rpy = "-1.5708 0 0"/>  
   </joint>
 
-
+  <joint name="joint6output_to_gripper" type="fixed">
+    <!-- <axis xyz="0 0 1"/>
+    <limit effort = "1000.0" lower = "-3.14" upper = "3.14159" velocity = "0"/> -->
+    <parent link="joint6_flange"/>
+    <child link="gripper"/>
+    <origin xyz= "0 0 0.034" rpy = "1.579 0 0"/>  
+  </joint>
 
 </robot>
 
