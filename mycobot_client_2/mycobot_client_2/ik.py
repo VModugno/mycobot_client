@@ -155,7 +155,7 @@ class CobotIK(Node):
         elif orientation_only:
             target_pose = ori_des_quat
         else:
-            target_pose = np.concat((np.array([msg.rx, msg.ry, msg.rz]), ori_des_quat), axis=0)
+            target_pose = np.concatenate((np.array([msg.rx, msg.ry, msg.rz]), ori_des_quat), axis=0)
         self.get_logger().info("target pose")
         self.get_logger().info(np.array_str(target_pose))
         num_iterations = 0
