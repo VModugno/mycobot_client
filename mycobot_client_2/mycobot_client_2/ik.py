@@ -144,20 +144,17 @@ class CobotIK(Node):
         position_only = (msg.x != -1 and msg.y != -1 and msg.z != -1) and (msg.rx == -1 and  msg.ry == -1 and msg.rz == -1)
         orientation_and_position = (msg.x != -1 and msg.y != -1 and msg.z != -1) and (msg.rx != -1 and  msg.ry != -1 and msg.rz != -1)
 
-        ori_des = pin.rpy.rpyToMatrix(np.array([msg.rx, msg.ry, msg.rz]))
+        ori_des_euler = np.array([msg.rx, msg.ry, msg.rz])
+        ori_des = pin.rpy.rpyToMatrix(ori_des_euler)
         ori_des_quat = pin.Quaternion(ori_des)
         ori_des_quat = ori_des_quat.normalize()
 
         p_des = np.array([msg.x, msg.y, msg.z])
-
-        if position_only:
-            target_pose = np.array([msg.x, msg.y, msg.z])
-        elif orientation_only:
-            target_pose = ori_des_quat
-        else:
-            target_pose = np.concatenate((np.array([msg.rx, msg.ry, msg.rz]), ori_des_quat), axis=0)
-        self.get_logger().info("target pose")
-        self.get_logger().info(np.array_str(target_pose))
+        
+        self.get_logger().info("position target")
+        self.get_logger().info(np.array_str(p_des))
+        self.get_logger().info("orientation target")
+        self.get_logger().info(np.array_str(ori_des_euler))
         num_iterations = 0
         success = False
         while num_iterations < self.get_parameter('max_iterations').value and not success:
