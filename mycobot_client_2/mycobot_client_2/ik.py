@@ -202,7 +202,8 @@ class CobotIK(Node):
             self.get_logger().debug(f"jacobian: {trimmed_jacobian.shape}")
             q_k_plus_one = q_k + step_size * do_dampened_pseudo_inverse(trimmed_jacobian, dampening_factor) @ (cur_error)
             num_iterations += 1
-            success = np.linalg.norm(q_k_plus_one - q_k) < tolerance
+            # success = np.linalg.norm(q_k_plus_one - q_k) < tolerance
+            success = np.linalg.norm(angle_error_base_frame) < tolerance and np.linalg.norm(pos_error) < tolerance
         if not success:
             self.get_logger().error(f"could not solve for solution in {self.get_parameter('max_iterations').value} iterations")
             return
