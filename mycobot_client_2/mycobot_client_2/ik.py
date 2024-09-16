@@ -3,6 +3,7 @@ from rclpy.node import Node
 
 from mycobot_client_2.cobot_client import MycobotClient, CurAngles
 from mycobot_msgs_2.msg import (MycobotSetAngles,
+                                MycobotAngles,
                                 MycobotPose,
                                 MycobotGripperStatus)
 
@@ -19,7 +20,9 @@ from simulation_and_control.controllers.pin_wrapper import PinWrapper
 COBOT_JOINT_GOAL_TOPIC = "mycobot/angles_goal"
 COBOT_POSE_GOAL_TOPIC = "mycobot/pose_goal"
 COBOT_GRIPPER_STATUS_TOPIC = "mycobot/gripper_status"
+COBOT_JOIN_REAL_TOPIC = "mycobot/angles_real"
 
+NUM_ANGLES = 6
 RADIAN_TO_DEGREES = (1/np.pi) * 180
 # the joints have the below min/maxes (from https://www.elephantrobotics.com/en/mycobot-280-pi-2023-specifications/)
 # J1 -165 ~ +165 
@@ -43,6 +46,14 @@ class CobotIK(Node):
             COBOT_POSE_GOAL_TOPIC,
             self.set_pose,
             1)
+
+        self.real_angle_sub = self.create_subscription(
+            MycobotAngles,
+            COBOT_JOIN_REAL_TOPIC,
+            self.update_real_angles,
+            1)
+
+        self.real_angles = np.zeros(NUM_ANGLES)
 
         self.declare_parameter('max_iterations', 500)
         self.declare_parameter('solution_tol', 0.1)
@@ -73,6 +84,18 @@ class CobotIK(Node):
         self.get_logger().info("Link info pinocchio:")
         self.get_logger().info(self.dyn_model.getDynamicsInfo())
 
+
+    def update_real_angles(self, msg):
+        angles = np.zeros(NUM_ANGLES)
+        angles[0] = msg.joint_1
+        angles[1] = msg.joint_2
+        angles[2] = msg.joint_3
+        angles[3] = msg.joint_4
+        angles[4] = msg.joint_5
+        angles[5] = msg.joint_6
+        self.real_angles = angles
+
+
     def adjust_angles(self, target_angles):
         new_angles = np.copy(target_angles)
         for i in range(new_angles.shape[0]):
@@ -100,7 +123,7 @@ class CobotIK(Node):
 
     
     def set_pose(self, msg):
-        q_k = np.array([0, 0, 0, 0, 0, 0])
+        q_k = np.copy(self.real_angles)
         end_effector_frame = "joint6_flange"
         local_or_global = "local_global"
         q_k_plus_one = np.copy(q_k)
