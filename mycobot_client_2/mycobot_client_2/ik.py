@@ -15,6 +15,7 @@ import simulation_and_control as sac
 from simulation_and_control.sim import pybullet_robot_interface as pb
 from simulation_and_control.controllers.servo_motor import MotorCommands
 from simulation_and_control.controllers.pin_wrapper import PinWrapper
+import pinocchio as pin
 
 
 COBOT_JOINT_GOAL_TOPIC = "mycobot/angles_goal"
@@ -143,7 +144,18 @@ class CobotIK(Node):
         position_only = (msg.x != -1 and msg.y != -1 and msg.z != -1) and (msg.rx == -1 and  msg.ry == -1 and msg.rz == -1)
         orientation_and_position = (msg.x != -1 and msg.y != -1 and msg.z != -1) and (msg.rx != -1 and  msg.ry != -1 and msg.rz != -1)
 
-        target_pose = np.array([msg.x, msg.y, msg.z])
+        ori_des = pin.rpy.rpyToMatrix(np.array([msg.rx, msg.ry, msg.rz]))
+        ori_des_quat = pin.Quaternion(ori_des)
+        ori_des_quat = ori_des_quat.normalize()
+
+        p_des = np.array([msg.x, msg.y, msg.z])
+
+        if position_only:
+            target_pose = np.array([msg.x, msg.y, msg.z])
+        elif orientation_only:
+            target_pose = ori_des_quat
+        else:
+            target_pose = np.concat((np.array([msg.rx, msg.ry, msg.rz]), ori_des_quat), axis=0)
         self.get_logger().info("target pose")
         self.get_logger().info(np.array_str(target_pose))
         num_iterations = 0
@@ -151,17 +163,47 @@ class CobotIK(Node):
         while num_iterations < self.get_parameter('max_iterations').value and not success:
             q_k = np.copy(q_k_plus_one)
             jacobian = self.dyn_model.ComputeJacobian(q_k, target_frame, local_or_global).J
-            trimmed_jacobian = np.copy(jacobian[0:3, :])
+            position, orientation = self.dyn_model.ComputeFK(q_k, target_frame)
+
+            cur_quat = pin.Quaternion(orientation)
+            cur_quat = cur_quat.normalize()
+
+            # Ensure quaternion is in the same hemisphere as the desired orientation
+            cur_quat_coeff = cur_quat.coeffs()
+            ori_des_quat_coeff = ori_des_quat.coeffs()
+            if np.dot(cur_quat_coeff, ori_des_quat_coeff) < 0.0:
+                cur_quat_coeff = cur_quat_coeff * -1.0
+                cur_quat = pin.Quaternion(cur_quat_coeff)
+
+            # Compute the "difference" quaternion (assuming orientation_d is also a pin.Quaternion object)
+            angle_error_quat = cur_quat.inverse() * ori_des_quat
+            # extract coefficient x y z from the quaternion
+            angle_error = angle_error_quat.coeffs()
+            angle_error = angle_error[:3]
+            
+            # rotate the angle error in the base frame
+            angle_error_base_frame = orientation@angle_error
+
+            # computing position error
+            pos_error = p_des - position
+
+            if position_only:
+                trimmed_jacobian = np.copy(jacobian[0:3, :])
+                cur_error = pos_error
+            elif orientation_only:
+                trimmed_jacobian = np.copy(jacobian[3:, :])
+                cur_error = angle_error_base_frame
+            else:
+                trimmed_jacobian = np.copy(jacobian)
+                cur_error = np.concatenate((pos_error,angle_error_base_frame),axis=0)
             self.get_logger().debug("jacobian")
             self.get_logger().debug(np.array_str(jacobian))
-            position, orientation = self.dyn_model.ComputeFK(q_k, target_frame)
             self.get_logger().debug("position at k")
             self.get_logger().debug(np.array_str(position))
             self.get_logger().debug("orientation at k")
             self.get_logger().debug(np.array_str(orientation))
-            inverted_j = np.linalg.pinv(trimmed_jacobian)
-            self.get_logger().debug(f"{q_k.shape} + {inverted_j.shape} @ ({target_pose.shape} - {position.shape})")
-            q_k_plus_one = q_k + step_size * do_dampened_pseudo_inverse(trimmed_jacobian, dampening_factor) @ (target_pose - position)
+            self.get_logger().debug(f"jacobian: {trimmed_jacobian.shape}")
+            q_k_plus_one = q_k + step_size * do_dampened_pseudo_inverse(trimmed_jacobian, dampening_factor) @ (cur_error)
             num_iterations += 1
             success = np.linalg.norm(q_k_plus_one - q_k) < tolerance
         if not success:
@@ -173,7 +215,10 @@ class CobotIK(Node):
 
             self.get_logger().info(f"forward kinematics with the solution results in:")
             position, orientation = self.dyn_model.ComputeFK(q_k_plus_one, target_frame)
+            self.get_logger().info("position:")
             self.get_logger().info(np.array_str(position))
+            self.get_logger().info("orientation:")
+            self.get_logger().info(np.array_str(pin.rpy.matrixToRpy(orientation)))
 
         adjusted_angles = self.adjust_angles(q_k_plus_one)
         new_joint_msg = MycobotSetAngles()
