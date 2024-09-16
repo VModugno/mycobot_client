@@ -56,10 +56,10 @@ class CobotIK(Node):
         self.real_angles = np.zeros(NUM_ANGLES)
 
         self.declare_parameter('max_iterations', 500)
-        self.declare_parameter('solution_tol', 0.1)
+        self.declare_parameter('solution_tol', 0.001)
         self.declare_parameter('move_speed', 30)
         self.declare_parameter('step_size', 0.1)
-        self.declare_parameter('gain_matrix_diagonal', 1.01)
+        self.declare_parameter('gain_matrix_diagonal', 1.00001)
 
         self.get_logger().info("start ...")
         
