@@ -7,8 +7,8 @@ ros2 run mycobot_client_2 cobot_ik
 
 
 ```
-ros2 topic pub /mycobot/pose_goal mycobot_msgs_2/msg/MycobotPose "{x: 0.1, y: 0.1, z: 0.25}" --once
-ros2 topic pub /mycobot/pose_goal mycobot_msgs_2/msg/MycobotPose "{x: 0.1, y: 0.1, z: 0.35}" --onc
+ros2 topic pub /mycobot/pose_goal mycobot_msgs_2/msg/MycobotPose "{frame: gripper, x: 0.04, y: -0.06, z: 0.45, rx: -40, ry: 0, rz: -75}" --once
+ros2 topic pub /mycobot/pose_goal mycobot_msgs_2/msg/MycobotPose "{frame: gripper, x: 0.04, y: -0.06, z: 0.45, rx: -40, ry: 0, rz: -55}" --once
 ```
 
 
@@ -16,8 +16,6 @@ ros2 topic pub /mycobot/pose_goal mycobot_msgs_2/msg/MycobotPose "{x: 0.1, y: 0.
 
 To visualize
 ```
-apt install ros-humble-joint-state-publisher
-apt install ros-humble-joint-state-publisher-gui
-apt-get install ros-humble-xacro
+apt install ros-humble-joint-state-publisher ros-humble-joint-state-publisher-gui ros-humble-xacro
 ros2 launch mycobot_client_2 display.launch.py urdf_package:=mycobot_client_2 urdf_package_path:=models/elephant_description/mycobot_280_pi.urdf
 ```
