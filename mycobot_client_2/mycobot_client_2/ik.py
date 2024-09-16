@@ -134,6 +134,12 @@ class CobotIK(Node):
             target_frame = "joint6_flange"
         local_or_global = "local_global"
         q_k_plus_one = np.copy(q_k)
+        
+        orientation_only = (msg.x == -1 and msg.y == -1 and msg.z == -1) and (msg.rx != -1 and  msg.ry != -1 and msg.rz != -1)
+        position_only = (msg.x != -1 and msg.y != -1 and msg.z != -1) and (msg.rx == -1 and  msg.ry == -1 and msg.rz == -1)
+        orientation_and_position = (msg.x != -1 and msg.y != -1 and msg.z != -1) and (msg.rx != -1 and  msg.ry != -1 and msg.rz != -1)
+        
+
         target_pose = np.array([msg.x, msg.y, msg.z])
         gain_matrix = np.eye(len(target_pose)) * gain_matrix_diagonal
         self.get_logger().info("target pose")
