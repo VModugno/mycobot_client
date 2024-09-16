@@ -58,6 +58,8 @@ class CobotIK(Node):
         self.declare_parameter('max_iterations', 500)
         self.declare_parameter('solution_tol', 0.1)
         self.declare_parameter('move_speed', 30)
+        self.declare_parameter('step_size', 0.1)
+        self.declare_parameter('gain_matrix_diagonal', 1.01)
 
         self.get_logger().info("start ...")
         
@@ -124,30 +126,34 @@ class CobotIK(Node):
     
     def set_pose(self, msg):
         q_k = np.copy(self.real_angles)
-        end_effector_frame = "joint6_flange"
+        tolerance = self.get_parameter('solution_tol').value
+        step_size = self.get_parameter('step_size').value
+        gain_matrix_diagonal = self.get_parameter('gain_matrix_diagonal').value
+        target_frame = msg.frame
+        if not target_frame:
+            target_frame = "joint6_flange"
         local_or_global = "local_global"
         q_k_plus_one = np.copy(q_k)
-        q_k_plus_one[:] = 99
         target_pose = np.array([msg.x, msg.y, msg.z])
+        gain_matrix = np.eye(len(target_pose)) * gain_matrix_diagonal
         self.get_logger().info("target pose")
         self.get_logger().info(np.array_str(target_pose))
         num_iterations = 0
         success = False
-        tolerance = self.get_parameter('solution_tol').value
         while num_iterations < self.get_parameter('max_iterations').value and not success:
             q_k = np.copy(q_k_plus_one)
-            jacobian = self.dyn_model.ComputeJacobian(q_k, end_effector_frame, local_or_global).J
+            jacobian = self.dyn_model.ComputeJacobian(q_k, target_frame, local_or_global).J
             trimmed_jacobian = np.copy(jacobian[0:3, :])
             self.get_logger().debug("jacobian")
             self.get_logger().debug(np.array_str(jacobian))
-            position, orientation = self.dyn_model.ComputeFK(q_k, end_effector_frame)
+            position, orientation = self.dyn_model.ComputeFK(q_k, target_frame)
             self.get_logger().debug("position at k")
             self.get_logger().debug(np.array_str(position))
             self.get_logger().debug("orientation at k")
             self.get_logger().debug(np.array_str(orientation))
             inverted_j = np.linalg.pinv(trimmed_jacobian)
             self.get_logger().debug(f"{q_k.shape} + {inverted_j.shape} @ ({target_pose.shape} - {position.shape})")
-            q_k_plus_one = q_k + np.linalg.pinv(trimmed_jacobian) @ (target_pose - position)
+            q_k_plus_one = q_k + step_size * np.linalg.pinv(trimmed_jacobian) @ gain_matrix @ (target_pose - position)
             num_iterations += 1
             success = np.linalg.norm(q_k_plus_one - q_k) < tolerance
         if not success:
@@ -158,13 +164,10 @@ class CobotIK(Node):
             self.get_logger().info(np.array_str(q_k_plus_one))
 
             self.get_logger().info(f"forward kinematics with the solution results in:")
-            position, orientation = self.dyn_model.ComputeFK(q_k_plus_one, end_effector_frame)
+            position, orientation = self.dyn_model.ComputeFK(q_k_plus_one, target_frame)
             self.get_logger().info(np.array_str(position))
 
         adjusted_angles = self.adjust_angles(q_k_plus_one)
-
-
-
         new_joint_msg = MycobotSetAngles()
         new_joint_msg.joint_1 = adjusted_angles[0]
         new_joint_msg.joint_2 = adjusted_angles[1]
