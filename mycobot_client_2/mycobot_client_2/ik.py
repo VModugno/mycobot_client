@@ -83,7 +83,7 @@ class CobotIK(Node):
                 angle_degrees_bounded = 360 - (angle_degrees_bounded * (-1))
 
             if angle_degrees_bounded > 180:
-                angle_degrees_wrapped = 360 - angle_degrees_wrapped
+                angle_degrees_wrapped = 360 - angle_degrees_bounded
                 angle_degrees_wrapped *= -1
             else:
                 angle_degrees_wrapped = angle_degrees_bounded
