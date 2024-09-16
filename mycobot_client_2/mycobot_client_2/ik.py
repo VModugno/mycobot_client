@@ -25,6 +25,7 @@ COBOT_JOIN_REAL_TOPIC = "mycobot/angles_real"
 
 NUM_ANGLES = 6
 RADIAN_TO_DEGREES = (1/np.pi) * 180
+DEGREES_TO_RADIANS = np.pi / 180
 # the joints have the below min/maxes (from https://www.elephantrobotics.com/en/mycobot-280-pi-2023-specifications/)
 # J1 -165 ~ +165 
 # J2 -165 ~ +165
@@ -144,8 +145,9 @@ class CobotIK(Node):
         position_only = (msg.x != -1 and msg.y != -1 and msg.z != -1) and (msg.rx == -1 and  msg.ry == -1 and msg.rz == -1)
         orientation_and_position = (msg.x != -1 and msg.y != -1 and msg.z != -1) and (msg.rx != -1 and  msg.ry != -1 and msg.rz != -1)
 
-        ori_des_euler = np.array([msg.rx, msg.ry, msg.rz])
-        ori_des = pin.rpy.rpyToMatrix(ori_des_euler)
+        ori_des_euler_degrees = np.array([msg.rx, msg.ry, msg.rz])
+        ori_des_euler_radians = ori_des_euler_degrees * DEGREES_TO_RADIANS
+        ori_des = pin.rpy.rpyToMatrix(ori_des_euler_radians)
         ori_des_quat = pin.Quaternion(ori_des)
         ori_des_quat = ori_des_quat.normalize()
 
@@ -217,7 +219,7 @@ class CobotIK(Node):
             self.get_logger().info("position:")
             self.get_logger().info(np.array_str(position))
             self.get_logger().info("orientation:")
-            self.get_logger().info(np.array_str(pin.rpy.matrixToRpy(orientation)))
+            self.get_logger().info(np.array_str(RADIAN_TO_DEGREES * pin.rpy.matrixToRpy(orientation)))
             self.get_logger().info("error:")
             self.get_logger().info(np.array_str(cur_error))
 
