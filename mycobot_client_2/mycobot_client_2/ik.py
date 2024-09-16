@@ -33,6 +33,10 @@ RADIAN_TO_DEGREES = (1/np.pi) * 180
 # J6 -179 ~ +179
 JOINT_LIMITS = [[-165, 165], [-165, 165], [-165, 165], [-165, 165], [-165, 165], [-179, 179]]
 
+def do_dampened_pseudo_inverse(matrix, dampening_factor):
+    # https://robotics.caltech.edu/~jwb/courses/ME115/handouts/damped.pdf
+    return matrix.T @ (matrix @ matrix.T + dampening_factor**2 * np.eye(matrix.shape[0]))
+
 
 class CobotIK(Node):
     def __init__(self):
@@ -59,7 +63,7 @@ class CobotIK(Node):
         self.declare_parameter('solution_tol', 0.001)
         self.declare_parameter('move_speed', 30)
         self.declare_parameter('step_size', 0.1)
-        self.declare_parameter('gain_matrix_diagonal', 1.00001)
+        self.declare_parameter('dampening_factor', 0.1)
 
         self.get_logger().info("start ...")
         
@@ -128,7 +132,7 @@ class CobotIK(Node):
         q_k = np.copy(self.real_angles)
         tolerance = self.get_parameter('solution_tol').value
         step_size = self.get_parameter('step_size').value
-        gain_matrix_diagonal = self.get_parameter('gain_matrix_diagonal').value
+        dampening_factor = self.get_parameter('dampening_factor').value
         target_frame = msg.frame
         if not target_frame:
             target_frame = "joint6_flange"
@@ -138,10 +142,8 @@ class CobotIK(Node):
         orientation_only = (msg.x == -1 and msg.y == -1 and msg.z == -1) and (msg.rx != -1 and  msg.ry != -1 and msg.rz != -1)
         position_only = (msg.x != -1 and msg.y != -1 and msg.z != -1) and (msg.rx == -1 and  msg.ry == -1 and msg.rz == -1)
         orientation_and_position = (msg.x != -1 and msg.y != -1 and msg.z != -1) and (msg.rx != -1 and  msg.ry != -1 and msg.rz != -1)
-        
 
         target_pose = np.array([msg.x, msg.y, msg.z])
-        gain_matrix = np.eye(len(target_pose)) * gain_matrix_diagonal
         self.get_logger().info("target pose")
         self.get_logger().info(np.array_str(target_pose))
         num_iterations = 0
@@ -159,7 +161,7 @@ class CobotIK(Node):
             self.get_logger().debug(np.array_str(orientation))
             inverted_j = np.linalg.pinv(trimmed_jacobian)
             self.get_logger().debug(f"{q_k.shape} + {inverted_j.shape} @ ({target_pose.shape} - {position.shape})")
-            q_k_plus_one = q_k + step_size * np.linalg.pinv(trimmed_jacobian) @ gain_matrix @ (target_pose - position)
+            q_k_plus_one = q_k + step_size * do_dampened_pseudo_inverse(trimmed_jacobian, dampening_factor) @ (target_pose - position)
             num_iterations += 1
             success = np.linalg.norm(q_k_plus_one - q_k) < tolerance
         if not success:
