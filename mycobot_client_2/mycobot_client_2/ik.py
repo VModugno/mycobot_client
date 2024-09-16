@@ -155,8 +155,8 @@ class CobotIK(Node):
 
         self.get_logger().info("position target")
         self.get_logger().info(np.array_str(p_des))
-        self.get_logger().info("orientation target")
-        self.get_logger().info(np.array_str(ori_des_euler))
+        self.get_logger().info("orientation target (degrees)")
+        self.get_logger().info(np.array_str(ori_des_euler_degrees))
         num_iterations = 0
         success = False
         while num_iterations < self.get_parameter('max_iterations').value and not success:
@@ -220,7 +220,7 @@ class CobotIK(Node):
             self.get_logger().info(np.array_str(position))
             self.get_logger().info("orientation:")
             self.get_logger().info(np.array_str(RADIAN_TO_DEGREES * pin.rpy.matrixToRpy(orientation)))
-            self.get_logger().info("error:")
+            self.get_logger().info("error (orientation error in quat)")
             self.get_logger().info(np.array_str(cur_error))
 
         adjusted_angles = self.adjust_angles(q_k_plus_one)
