@@ -220,14 +220,15 @@ class CobotIK(Node):
         self.get_logger().info(np.array_str(cur_error))
 
         pybullet_client = self.sim.GetPyBulletClient()
-        robot_id = 0
-        link_id = self.sim.bot[robot_id].link_name_to_id[target_frame]
+        bot_id = 0
+        link_id = self.sim.bot[bot_id].link_name_to_id[target_frame]
         joint_limits = np.array(JOINT_LIMITS)
+        pybullet_robot_index = self.sim.bot[bot_id].bot_pybullet
 
-        joint_poses_pybullet = pybullet_client.calculateInverseKinematics(robot_id,
+        joint_poses_pybullet = pybullet_client.calculateInverseKinematics(pybullet_robot_index,
                                                   link_id,
                                                   p_des,
-                                                  ori_des_quat,
+                                                  ori_des_quat.coeffs(),
                                                   lowerLimits=joint_limits[:, 0],
                                                   upperLimits=joint_limits[:, 1])
                                                 #   jointRanges=jr,
@@ -242,7 +243,9 @@ class CobotIK(Node):
         else:
             self.get_logger().info(f"found solution in {num_iterations} iterations")
 
-        adjusted_angles = self.adjust_angles(q_k_plus_one)
+        # adjusted_angles = self.adjust_angles(q_k_plus_one)
+        adjusted_angles = self.adjust_angles(joint_poses_pybullet)
+        
         new_joint_msg = MycobotSetAngles()
         new_joint_msg.joint_1 = adjusted_angles[0]
         new_joint_msg.joint_2 = adjusted_angles[1]
