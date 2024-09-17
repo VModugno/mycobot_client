@@ -233,6 +233,7 @@ class CobotIK(Node):
                                                   upperLimits=joint_limits[:, 1])
                                                 #   jointRanges=jr,
                                                 #   restPoses=rp
+        joint_poses_pybullet = np.array(joint_poses_pybullet)
 
         self.get_logger().info("pybullet poses")
         self.get_logger().info(f"{np.array_str(joint_poses_pybullet)}")
