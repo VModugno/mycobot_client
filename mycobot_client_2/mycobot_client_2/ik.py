@@ -240,7 +240,7 @@ class CobotIK(Node):
         
         if not success:
             self.get_logger().error(f"could not solve for solution in {self.get_parameter('max_iterations').value} iterations")
-            return
+            # return
         else:
             self.get_logger().info(f"found solution in {num_iterations} iterations")
 
