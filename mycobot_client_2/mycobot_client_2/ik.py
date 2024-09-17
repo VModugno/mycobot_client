@@ -207,21 +207,23 @@ class CobotIK(Node):
             num_iterations += 1
             success = np.linalg.norm(q_k_plus_one - q_k) < tolerance
             # success = np.linalg.norm(angle_error_base_frame) < tolerance and np.linalg.norm(pos_error) < tolerance
+        
+        self.get_logger().info("forward kinematics with the solution results in:")
+        self.get_logger().info(f"q_k:\n{np.array_str(q_k)}")
+        self.get_logger().info(f"q_k_plus_one:\n{np.array_str(q_k_plus_one)}")
+        position, orientation = self.dyn_model.ComputeFK(q_k_plus_one, target_frame)
+        self.get_logger().info("position:")
+        self.get_logger().info(np.array_str(position))
+        self.get_logger().info("orientation:")
+        self.get_logger().info(np.array_str(RADIAN_TO_DEGREES * pin.rpy.matrixToRpy(orientation)))
+        self.get_logger().info("error (orientation error in quat)")
+        self.get_logger().info(np.array_str(cur_error))
+        
         if not success:
             self.get_logger().error(f"could not solve for solution in {self.get_parameter('max_iterations').value} iterations")
             return
         else:
             self.get_logger().info(f"found solution in {num_iterations} iterations")
-            self.get_logger().info(np.array_str(q_k_plus_one))
-
-            self.get_logger().info(f"forward kinematics with the solution results in:")
-            position, orientation = self.dyn_model.ComputeFK(q_k_plus_one, target_frame)
-            self.get_logger().info("position:")
-            self.get_logger().info(np.array_str(position))
-            self.get_logger().info("orientation:")
-            self.get_logger().info(np.array_str(RADIAN_TO_DEGREES * pin.rpy.matrixToRpy(orientation)))
-            self.get_logger().info("error (orientation error in quat)")
-            self.get_logger().info(np.array_str(cur_error))
 
         adjusted_angles = self.adjust_angles(q_k_plus_one)
         new_joint_msg = MycobotSetAngles()
