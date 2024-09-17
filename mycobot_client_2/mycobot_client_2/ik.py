@@ -66,6 +66,8 @@ class CobotIK(Node):
         self.declare_parameter('move_speed', 30)
         self.declare_parameter('step_size', 0.1)
         self.declare_parameter('dampening_factor', 0.1)
+        self.declare_parameter('initial_guess_is_cur_pos', True)
+        self.declare_parameter('use_pybullet', True)
 
         self.get_logger().info("start ...")
         
@@ -128,124 +130,164 @@ class CobotIK(Node):
                 angle_degrees_wrapped = joint_max
             new_angles[i] = angle_degrees_wrapped
         return new_angles
-
     
-    def set_pose(self, msg):
-        q_k = np.copy(self.real_angles)
-        tolerance = self.get_parameter('solution_tol').value
-        step_size = self.get_parameter('step_size').value
-        dampening_factor = self.get_parameter('dampening_factor').value
-        target_frame = msg.frame
-        if not target_frame:
-            target_frame = "joint6_flange"
-        local_or_global = "local_global"
+    def wait_for_pose(self, angles, tolerance):
+        pass
+
+    def calculate_ik(self, target_position, euler_angles_degrees, target_frame, tolerance, step_size, dampening_factor,
+                     initial_guess_is_cur_pos, max_iterations, use_pybullet=True):
+        """_summary_
+
+        Args:
+            position (_type_): np.array 3D
+            euler_angles_degrees (_type_): np.array 3D
+            target_frame (_type_): _description_
+            tolerance (_type_): _description_
+            step_size (_type_): _description_
+            dampening_factor (_type_): _description_
+            initial_guess_is_cur_pos (_type_): _description_
+            use_pybullet (bool, optional): _description_. Defaults to True.
+        """
+        if initial_guess_is_cur_pos:
+            q_k = np.copy(self.real_angles)
+        else:
+            q_k = np.zeros(len(self.real_angles))
+        
         q_k_plus_one = np.copy(q_k)
         
-        orientation_only = (msg.x == -1 and msg.y == -1 and msg.z == -1) and (msg.rx != -1 and  msg.ry != -1 and msg.rz != -1)
-        position_only = (msg.x != -1 and msg.y != -1 and msg.z != -1) and (msg.rx == -1 and  msg.ry == -1 and msg.rz == -1)
-        orientation_and_position = (msg.x != -1 and msg.y != -1 and msg.z != -1) and (msg.rx != -1 and  msg.ry != -1 and msg.rz != -1)
+        x, y, z = target_position
+        rx, ry, rz = euler_angles_degrees
+        
+        orientation_only = (x == -1 and y == -1 and z == -1) and (rx != -1 and  ry != -1 and rz != -1)
+        position_only = (x != -1 and y != -1 and z != -1) and (rx == -1 and  ry == -1 and rz == -1)
+        orientation_and_position = (x != -1 and y != -1 and z != -1) and (rx != -1 and  ry != -1 and rz != -1)
 
-        ori_des_euler_degrees = np.array([msg.rx, msg.ry, msg.rz])
+        ori_des_euler_degrees = np.array([rx, ry, rz])
         ori_des_euler_radians = ori_des_euler_degrees * DEGREES_TO_RADIANS
         ori_des = pin.rpy.rpyToMatrix(ori_des_euler_radians)
         ori_des_quat = pin.Quaternion(ori_des)
         ori_des_quat = ori_des_quat.normalize()
 
-        p_des = np.array([msg.x, msg.y, msg.z])
+        joint_angles = None
 
-        self.get_logger().info("position target")
-        self.get_logger().info(np.array_str(p_des))
-        self.get_logger().info("orientation target (degrees)")
-        self.get_logger().info(np.array_str(ori_des_euler_degrees))
-        num_iterations = 0
-        success = False
-        while num_iterations < self.get_parameter('max_iterations').value and not success:
-            q_k = np.copy(q_k_plus_one)
-            jacobian = self.dyn_model.ComputeJacobian(q_k, target_frame, local_or_global).J
-            position, orientation = self.dyn_model.ComputeFK(q_k, target_frame)
+        if not use_pybullet:
+            local_or_global = "local_global"
+            self.get_logger().info("position target")
+            self.get_logger().info(np.array_str(target_position))
+            self.get_logger().info("orientation target (degrees)")
+            self.get_logger().info(np.array_str(ori_des_euler_degrees))
+            num_iterations = 0
+            success = False
+            while num_iterations < max_iterations and not success:
+                q_k = np.copy(q_k_plus_one)
+                jacobian = self.dyn_model.ComputeJacobian(q_k, target_frame, local_or_global).J
+                position, orientation = self.dyn_model.ComputeFK(q_k, target_frame)
 
-            cur_quat = pin.Quaternion(orientation)
-            cur_quat = cur_quat.normalize()
+                cur_quat = pin.Quaternion(orientation)
+                cur_quat = cur_quat.normalize()
 
-            # Ensure quaternion is in the same hemisphere as the desired orientation
-            cur_quat_coeff = cur_quat.coeffs()
-            ori_des_quat_coeff = ori_des_quat.coeffs()
-            if np.dot(cur_quat_coeff, ori_des_quat_coeff) < 0.0:
-                cur_quat_coeff = cur_quat_coeff * -1.0
-                cur_quat = pin.Quaternion(cur_quat_coeff)
+                # Ensure quaternion is in the same hemisphere as the desired orientation
+                cur_quat_coeff = cur_quat.coeffs()
+                ori_des_quat_coeff = ori_des_quat.coeffs()
+                if np.dot(cur_quat_coeff, ori_des_quat_coeff) < 0.0:
+                    cur_quat_coeff = cur_quat_coeff * -1.0
+                    cur_quat = pin.Quaternion(cur_quat_coeff)
 
-            # Compute the "difference" quaternion (assuming orientation_d is also a pin.Quaternion object)
-            angle_error_quat = cur_quat.inverse() * ori_des_quat
-            # extract coefficient x y z from the quaternion
-            angle_error = angle_error_quat.coeffs()
-            angle_error = angle_error[:3]
+                # Compute the "difference" quaternion (assuming orientation_d is also a pin.Quaternion object)
+                angle_error_quat = cur_quat.inverse() * ori_des_quat
+                # extract coefficient x y z from the quaternion
+                angle_error = angle_error_quat.coeffs()
+                angle_error = angle_error[:3]
+                
+                # rotate the angle error in the base frame
+                angle_error_base_frame = orientation@angle_error
+
+                # computing position error
+                pos_error = target_position - position
+
+                if position_only:
+                    trimmed_jacobian = np.copy(jacobian[0:3, :])
+                    cur_error = pos_error
+                elif orientation_only:
+                    trimmed_jacobian = np.copy(jacobian[3:, :])
+                    cur_error = angle_error_base_frame
+                else:
+                    trimmed_jacobian = np.copy(jacobian)
+                    cur_error = np.concatenate((pos_error,angle_error_base_frame),axis=0)
+                self.get_logger().debug("jacobian")
+                self.get_logger().debug(np.array_str(jacobian))
+                self.get_logger().debug("position at k")
+                self.get_logger().debug(np.array_str(position))
+                self.get_logger().debug("orientation at k")
+                self.get_logger().debug(np.array_str(orientation))
+                self.get_logger().debug(f"jacobian: {trimmed_jacobian.shape}")
+                # q_k_plus_one = q_k + step_size * do_dampened_pseudo_inverse(trimmed_jacobian, dampening_factor) @ (cur_error)
+                q_k_plus_one = q_k + step_size * np.linalg.pinv(trimmed_jacobian) @ (cur_error)
+                num_iterations += 1
+                success = np.linalg.norm(q_k_plus_one - q_k) < tolerance
+                # success = np.linalg.norm(angle_error_base_frame) < tolerance and np.linalg.norm(pos_error) < tolerance
             
-            # rotate the angle error in the base frame
-            angle_error_base_frame = orientation@angle_error
-
-            # computing position error
-            pos_error = p_des - position
-
-            if position_only:
-                trimmed_jacobian = np.copy(jacobian[0:3, :])
-                cur_error = pos_error
-            elif orientation_only:
-                trimmed_jacobian = np.copy(jacobian[3:, :])
-                cur_error = angle_error_base_frame
+            self.get_logger().info("forward kinematics with the solution results in:")
+            self.get_logger().info(f"q_k:\n{np.array_str(q_k)}")
+            self.get_logger().info(f"q_k_plus_one:\n{np.array_str(q_k_plus_one)}")
+            position, orientation = self.dyn_model.ComputeFK(q_k_plus_one, target_frame)
+            self.get_logger().info("position:")
+            self.get_logger().info(np.array_str(position))
+            self.get_logger().info("orientation:")
+            self.get_logger().info(np.array_str(RADIAN_TO_DEGREES * pin.rpy.matrixToRpy(orientation)))
+            self.get_logger().info("error (orientation error in quat)")
+            self.get_logger().info(np.array_str(cur_error))
+            if not success:
+                self.get_logger().error(f"could not solve for solution in {max_iterations} iterations")
             else:
-                trimmed_jacobian = np.copy(jacobian)
-                cur_error = np.concatenate((pos_error,angle_error_base_frame),axis=0)
-            self.get_logger().debug("jacobian")
-            self.get_logger().debug(np.array_str(jacobian))
-            self.get_logger().debug("position at k")
-            self.get_logger().debug(np.array_str(position))
-            self.get_logger().debug("orientation at k")
-            self.get_logger().debug(np.array_str(orientation))
-            self.get_logger().debug(f"jacobian: {trimmed_jacobian.shape}")
-            # q_k_plus_one = q_k + step_size * do_dampened_pseudo_inverse(trimmed_jacobian, dampening_factor) @ (cur_error)
-            q_k_plus_one = q_k + step_size * np.linalg.pinv(trimmed_jacobian) @ (cur_error)
-            num_iterations += 1
-            success = np.linalg.norm(q_k_plus_one - q_k) < tolerance
-            # success = np.linalg.norm(angle_error_base_frame) < tolerance and np.linalg.norm(pos_error) < tolerance
-        
-        self.get_logger().info("forward kinematics with the solution results in:")
-        self.get_logger().info(f"q_k:\n{np.array_str(q_k)}")
-        self.get_logger().info(f"q_k_plus_one:\n{np.array_str(q_k_plus_one)}")
-        position, orientation = self.dyn_model.ComputeFK(q_k_plus_one, target_frame)
-        self.get_logger().info("position:")
-        self.get_logger().info(np.array_str(position))
-        self.get_logger().info("orientation:")
-        self.get_logger().info(np.array_str(RADIAN_TO_DEGREES * pin.rpy.matrixToRpy(orientation)))
-        self.get_logger().info("error (orientation error in quat)")
-        self.get_logger().info(np.array_str(cur_error))
-
-        pybullet_client = self.sim.GetPyBulletClient()
-        bot_id = 0
-        link_id = self.sim.bot[bot_id].link_name_to_id[target_frame]
-        joint_limits = np.array(JOINT_LIMITS)
-        pybullet_robot_index = self.sim.bot[bot_id].bot_pybullet
-
-        joint_poses_pybullet = pybullet_client.calculateInverseKinematics(pybullet_robot_index,
-                                                  link_id,
-                                                  p_des,
-                                                  ori_des_quat.coeffs(),
-                                                  lowerLimits=joint_limits[:, 0],
-                                                  upperLimits=joint_limits[:, 1])
-                                                #   jointRanges=jr,
-                                                #   restPoses=rp
-        joint_poses_pybullet = np.array(joint_poses_pybullet)
-
-        self.get_logger().info("pybullet poses")
-        self.get_logger().info(f"{np.array_str(joint_poses_pybullet)}")
-        
-        if not success:
-            self.get_logger().error(f"could not solve for solution in {self.get_parameter('max_iterations').value} iterations")
-            # return
+                self.get_logger().info(f"found solution in {num_iterations} iterations")
+                joint_angles = q_k_plus_one
         else:
-            self.get_logger().info(f"found solution in {num_iterations} iterations")
+            pybullet_client = self.sim.GetPyBulletClient()
+            bot_id = 0
+            link_id = self.sim.bot[bot_id].link_name_to_id[target_frame]
+            joint_limits = np.array(JOINT_LIMITS)
+            pybullet_robot_index = self.sim.bot[bot_id].bot_pybullet
 
-        # adjusted_angles = self.adjust_angles(q_k_plus_one)
-        adjusted_angles = self.adjust_angles(joint_poses_pybullet)
+            joint_poses_pybullet = pybullet_client.calculateInverseKinematics(pybullet_robot_index,
+                                                    link_id,
+                                                    target_position,
+                                                    ori_des_quat.coeffs(),
+                                                    lowerLimits=joint_limits[:, 0],
+                                                    upperLimits=joint_limits[:, 1])
+                                                    #   jointRanges=jr,
+                                                    #   restPoses=rp
+            joint_poses_pybullet = np.array(joint_poses_pybullet)
+
+            self.get_logger().info("pybullet poses")
+            self.get_logger().info(f"{np.array_str(joint_poses_pybullet)}")
+            joint_angles = joint_poses_pybullet
+        return joint_angles
+
+        
+
+
+    def set_pose(self, msg):
+        position = np.array([msg.x, msg.y, msg.z])
+        euler_angles_degrees = np.array([msg.rx, msg.ry, msg.rz])
+        target_frame = msg.frame
+        if not target_frame:
+            target_frame = "gripper"
+        
+        tolerance = self.get_parameter('solution_tol').value
+        step_size = self.get_parameter('step_size').value
+        dampening_factor = self.get_parameter('dampening_factor').value
+        initial_guess_is_cur_pos = self.get_parameter('initial_guess_is_cur_pos').value
+        max_iterations = self.get_parameter('max_iterations').value
+        use_pybullet = self.get_parameter('use_pybullet').value
+
+
+        angles = self.calculate_ik(position, euler_angles_degrees, target_frame, tolerance, step_size, dampening_factor, initial_guess_is_cur_pos, max_iterations, use_pybullet)
+
+        if angles is None:
+            return
+
+        adjusted_angles = self.adjust_angles(angles)
         
         new_joint_msg = MycobotSetAngles()
         new_joint_msg.joint_1 = adjusted_angles[0]
