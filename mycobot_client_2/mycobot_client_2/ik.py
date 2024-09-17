@@ -218,6 +218,23 @@ class CobotIK(Node):
         self.get_logger().info(np.array_str(RADIAN_TO_DEGREES * pin.rpy.matrixToRpy(orientation)))
         self.get_logger().info("error (orientation error in quat)")
         self.get_logger().info(np.array_str(cur_error))
+
+        pybullet_client = self.sim.GetPyBulletClient()
+        robot_id = 0
+        link_id = self.sim.bot[robot_id].link_name_to_id[target_frame]
+        joint_limits = np.array(JOINT_LIMITS)
+
+        joint_poses_pybullet = pybullet_client.calculateInverseKinematics(robot_id,
+                                                  link_id,
+                                                  p_des,
+                                                  ori_des_quat,
+                                                  lowerLimits=joint_limits[:, 0],
+                                                  upperLimits=joint_limits[:, 1])
+                                                #   jointRanges=jr,
+                                                #   restPoses=rp
+
+        self.get_logger().info("pybullet poses")
+        self.get_logger().info(f"{np.array_str(joint_poses_pybullet)}")
         
         if not success:
             self.get_logger().error(f"could not solve for solution in {self.get_parameter('max_iterations').value} iterations")
