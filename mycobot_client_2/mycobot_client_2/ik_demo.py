@@ -48,7 +48,7 @@ def main(args=None):
     cur_angle = -70.0
     cur_sign = 1
 
-    angular_change_per_second = 5
+    angular_change_per_second = 15
 
     angle_diff = angular_change_per_second / loop_rate
     my_pose = MycobotPose()
