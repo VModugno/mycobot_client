@@ -115,6 +115,8 @@ class CobotIK(Node):
             if angle_degrees_bounded < 0:
                 angle_degrees_bounded = 360 - (angle_degrees_bounded * (-1))
 
+            # now i need to remap 0 to 360 to -180 to 180
+            # keeping 0-180 where it is, changing where 180-360 is, but this creates some wrapping issues
             if angle_degrees_bounded > 180:
                 angle_degrees_wrapped = 360 - angle_degrees_bounded
                 angle_degrees_wrapped *= -1

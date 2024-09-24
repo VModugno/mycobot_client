@@ -43,9 +43,9 @@ def main(args=None):
     time.sleep(5)
 
     frame = "gripper"
-    min_angle = -70.0
-    max_angle = 70.0
-    cur_angle = -70.0
+    min_angle = -210.0
+    max_angle = 90.0
+    cur_angle = min_angle
     cur_sign = 1
 
     angular_change_per_second = 15
