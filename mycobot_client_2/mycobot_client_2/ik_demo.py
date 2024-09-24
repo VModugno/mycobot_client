@@ -28,7 +28,6 @@ def main(args=None):
     thread = threading.Thread(target=rclpy.spin, args=(cobot_ik, ), daemon=True)
     thread.start()
 
-    rclpy.spin(cobot_ik)
     demo_time = 30
     start_time = time.time()
     loop_rate = 30
@@ -59,9 +58,6 @@ def main(args=None):
     my_pose.rx = -40
     my_pose.ry = 0
     my_pose.rz = cur_angle
-
-
-
 
     while rclpy.ok() and time.time() - start_time < demo_time:
         my_pose.rz = cur_angle
