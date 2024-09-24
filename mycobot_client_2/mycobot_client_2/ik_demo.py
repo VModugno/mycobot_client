@@ -9,12 +9,13 @@ from mycobot_client_2.ik import CobotIK
 
 def get_zero_joints_msg(speed: int):
     zero_joints = MycobotSetAngles()
-    zero_joints.joint_1 = 0
-    zero_joints.joint_2 = 0
-    zero_joints.joint_3 = 0
-    zero_joints.joint_4 = 0
-    zero_joints.joint_5 = 0
-    zero_joints.joint_6 = 0
+    zero_val = 0.0
+    zero_joints.joint_1 = zero_val
+    zero_joints.joint_2 = zero_val
+    zero_joints.joint_3 = zero_val
+    zero_joints.joint_4 = zero_val
+    zero_joints.joint_5 = zero_val
+    zero_joints.joint_6 = zero_val
     zero_joints.speed = speed
     return zero_joints
 
