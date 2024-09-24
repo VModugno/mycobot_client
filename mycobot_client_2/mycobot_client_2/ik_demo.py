@@ -56,8 +56,8 @@ def main(args=None):
     my_pose.x = 0.04
     my_pose.y = -0.06
     my_pose.z = 0.45
-    my_pose.rx = -40
-    my_pose.ry = 0
+    my_pose.rx = -40.0
+    my_pose.ry = 0.0
     my_pose.rz = cur_angle
 
     while rclpy.ok() and time.time() - start_time < demo_time:
