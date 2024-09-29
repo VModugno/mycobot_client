@@ -3,6 +3,9 @@
 	
 <xacro:property name="width" value=".2" />
 
+  <link name="robot_base">
+  </link>
+
 
   <link name="g_base">
     <visual>
@@ -183,6 +186,12 @@
 
   <link name="gripper">
   </link>
+
+  <joint name="robot_base_to_g_base" type="fixed">
+    <parent link="robot_base"/>
+    <child link="g_base"/>
+    <origin xyz= "0 0 0.12" rpy = "0 0 0"/>  
+  </joint>
 
   <joint name="g_base_to_joint1" type="fixed">
     <axis xyz="0 0 0"/>
