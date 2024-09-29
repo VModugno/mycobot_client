@@ -8,8 +8,10 @@ from mycobot_msgs_2.msg import (MycobotSetAngles,
                                 MycobotGripperStatus)
 
 import numpy as np
+import numpy.typing as npt
 import time
 import os
+from typing import Tuple, Optional
 from ament_index_python.packages import get_package_share_directory
 import simulation_and_control as sac
 from simulation_and_control.sim import pybullet_robot_interface as pb
@@ -95,7 +97,12 @@ class CobotIK(Node):
         self.get_logger().info(self.dyn_model.getDynamicsInfo())
 
 
-    def update_real_angles(self, msg):
+    def update_real_angles(self, msg: MycobotAngles):
+        """Helper function to be called in a ROS2 callback that takes the message and stores it in a numpy array in the class.
+
+        Args:
+            msg (MycobotAngles): msg from mycobot_msgs_2
+        """
         angles = np.zeros(NUM_ANGLES)
         angles[0] = msg.joint_1
         angles[1] = msg.joint_2
@@ -104,6 +111,33 @@ class CobotIK(Node):
         angles[4] = msg.joint_5
         angles[5] = msg.joint_6
         self.real_angles = angles
+    
+    def get_real_angles(self) -> npt.NDArray[np.float]:
+        """Helper function to return the current angles.
+
+        Returns:
+            npt.NDArray[np.float]: numpy array with the joint angles 1-6.
+        """
+        return np.copy(self.real_angles)
+    
+    def get_pose(self, cur_joint_angles: Optional[npt.NDArray[np.float]] = None,
+                     target_frame: str = "gripper") -> Tuple[npt.NDArray[np.float], npt.NDArray[np.float]]:
+        """Helper function to get the current pose of the robot from the current angles.
+
+        Args:
+            cur_joint_angles (Optional, optional): What current angles to calculate direct kinematics with? 6D numpy array. Defaults to None.
+            target_frame (str, optional): What frame should the pose be in, from frames in the URDF. Defaults to "gripper".
+
+        Returns:
+            Tuple[npt.NDArray[np.float], npt.NDArray[np.float]]: returns position (x, y, z, meters) and orientation (rx, ry, rz, euler angles degrees)
+        """
+
+        if cur_joint_angles is None:
+            cur_joint_angles = self.get_real_angles()
+            cur_joint_angles = DEGREES_TO_RADIANS * cur_joint_angles
+        position, orientation = self.dyn_model.ComputeFK(cur_joint_angles, target_frame)
+        euler_angles = RADIAN_TO_DEGREES * pin.rpy.matrixToRpy(orientation)
+        return position, euler_angles
 
 
     def adjust_angles(self, target_angles):
@@ -132,9 +166,7 @@ class CobotIK(Node):
                 angle_degrees_wrapped = joint_max
             new_angles[i] = angle_degrees_wrapped
         return new_angles
-    
-    def wait_for_pose(self, angles, tolerance):
-        pass
+
 
     def calculate_ik(self, target_position, euler_angles_degrees, target_frame, tolerance, step_size, dampening_factor,
                      initial_guess_is_cur_pos, max_iterations, use_pybullet=True):
@@ -162,7 +194,6 @@ class CobotIK(Node):
         
         orientation_only = (x == -1 and y == -1 and z == -1) and (rx != -1 and  ry != -1 and rz != -1)
         position_only = (x != -1 and y != -1 and z != -1) and (rx == -1 and  ry == -1 and rz == -1)
-        orientation_and_position = (x != -1 and y != -1 and z != -1) and (rx != -1 and  ry != -1 and rz != -1)
 
         ori_des_euler_degrees = np.array([rx, ry, rz])
         ori_des_euler_radians = ori_des_euler_degrees * DEGREES_TO_RADIANS
@@ -229,16 +260,16 @@ class CobotIK(Node):
                 success = np.linalg.norm(q_k_plus_one - q_k) < tolerance
                 # success = np.linalg.norm(angle_error_base_frame) < tolerance and np.linalg.norm(pos_error) < tolerance
             
-            self.get_logger().info("forward kinematics with the solution results in:")
-            self.get_logger().info(f"q_k:\n{np.array_str(q_k)}")
-            self.get_logger().info(f"q_k_plus_one:\n{np.array_str(q_k_plus_one)}")
-            position, orientation = self.dyn_model.ComputeFK(q_k_plus_one, target_frame)
-            self.get_logger().info("position:")
-            self.get_logger().info(np.array_str(position))
-            self.get_logger().info("orientation:")
-            self.get_logger().info(np.array_str(RADIAN_TO_DEGREES * pin.rpy.matrixToRpy(orientation)))
-            self.get_logger().info("error (orientation error in quat)")
-            self.get_logger().info(np.array_str(cur_error))
+            self.get_logger().debug("forward kinematics with the solution results in:")
+            self.get_logger().debug(f"q_k:\n{np.array_str(q_k)}")
+            self.get_logger().debug(f"q_k_plus_one:\n{np.array_str(q_k_plus_one)}")
+            position, orientation = self.get_pose(q_k_plus_one, target_frame)
+            self.get_logger().debug("position:")
+            self.get_logger().debug(np.array_str(position))
+            self.get_logger().debug("orientation:")
+            self.get_logger().debug(np.array_str(orientation))
+            self.get_logger().debug("error (orientation error in quat)")
+            self.get_logger().debug(np.array_str(cur_error))
             if not success:
                 self.get_logger().error(f"could not solve for solution in {max_iterations} iterations")
             else:
@@ -261,8 +292,8 @@ class CobotIK(Node):
                                                     #   restPoses=rp
             joint_poses_pybullet = np.array(joint_poses_pybullet)
 
-            self.get_logger().info("pybullet poses")
-            self.get_logger().info(f"{np.array_str(joint_poses_pybullet)}")
+            self.get_logger().debug("pybullet poses")
+            self.get_logger().debug(f"{np.array_str(joint_poses_pybullet)}")
             joint_angles = joint_poses_pybullet
         return joint_angles
 

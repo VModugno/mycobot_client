@@ -50,7 +50,8 @@ setup(
         'console_scripts': [
             'cobot_client = mycobot_client_2.cobot_client:main',
             'cobot_ik = mycobot_client_2.ik:main',
-            'cobot_ik_demo = mycobot_client_2.ik_demo:main'
+            'cobot_ik_demo = mycobot_client_2.ik_demo:main',
+            'run_task = mycobot_client_2.run_task:main'
         ],
     },
 )
