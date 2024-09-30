@@ -104,7 +104,7 @@ class CobotIK(Node):
         self.link_name_to_id = {}
         for i in range(num_joints):
             joint_info = pybullet_client.getJointInfo(self.bot_pybullet, i)
-            self.get_logger().info(joint_info)
+            self.get_logger().info(str(joint_info))
             self.link_name_to_id[joint_info[12].decode("UTF-8")] = joint_info[0]
     
     def update_pybullet(self, angles):
