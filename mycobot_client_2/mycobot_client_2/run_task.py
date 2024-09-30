@@ -9,8 +9,9 @@ from mycobot_client_2.ik import CobotIK
 
 
 
-positions_times = [(MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.2, rx=math.pi, ry=0.0, rz=0.0), 5.0),
-                   (MycobotPose(frame="gripper", x=0.2, y=0.15, z=0.2, rx=math.pi, ry=0.0, rz=0.0), 5.0),]
+positions_times = [(MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.05, rx=180.0, ry=0.0, rz=-30.0), 5.0),
+                   (MycobotPose(frame="gripper", x=0.2, y=-0.15, z=0.05, rx=180.0, ry=0.0, rz=-30.0), 5.0)]
+
 
 
 def get_zero_joints_msg(speed: int):
@@ -66,7 +67,7 @@ def main(args=None):
             cur_position, cur_orientation_euler_angles_degrees = cobot_ik.get_pose(
                 cur_joint_angles=cur_angles, target_frame=frame)
             print(f"position {cur_position}")
-            print(f"position {cur_orientation_euler_angles_degrees}")
+            print(f"orientation {cur_orientation_euler_angles_degrees}")
 
         rate.sleep()
 
