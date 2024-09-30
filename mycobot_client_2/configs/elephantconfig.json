@@ -16,7 +16,7 @@
         "robot_description_model":[""],
         "urdf_path": ["elephant_description/mycobot_280_pi.urdf"],
         "ros_urdf_path": "",
-        "init_link_base_position": [[0, 0, 0.03]],
+        "init_link_base_position": [[0, 0, 0.0]],
         "init_link_base_vel": [[0.0, 0.0, 0.0]],
         "init_link_base_orientation": [[0.0, 0.0, 0.0, 1]],
         "init_link_base_ang_vel": [[0.0, 0.0, 0.0]],
@@ -33,7 +33,7 @@
         "foot_friction": [2],
         "foot_restitution": [0],
         "enable_feet_joint_force_sensors": [["RL_foot_fixed", "RR_foot_fixed", "FL_foot_fixed", "FR_foot_fixed"]],
-        "floating_base_name": ["floating_base"],
+        "floating_base_name": ["robot_base"],
         "servo_pos_gains": [400],
         "servo_vel_gains": [3],
         "delay_measure_flag":[0],
@@ -62,7 +62,7 @@
         "robot_description_model": [""],
         "urdf_path": ["elephant_description/mycobot_280_pi.urdf"],
         "ros_urdf_path": [""],
-        "floating_base_name": ["floating_base"],
+        "floating_base_name": ["robot_base"],
         "joint_state_conversion_active": [1]
     }
   
