@@ -40,6 +40,17 @@ SPEED_MIN = 0
 SPEED_MAX = 100
 JOINT_SIGNS = [1, 1, 1, 1, 1, 1]
 
+# (0, b'robot_base_to_g_base', 4, -1, -1, 0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, b'g_base', (0.0, 0.0, 0.0), (0.0, 0.0, 0.003), (0.0, 0.0, 0.0, 1.0), -1)
+# (1, b'g_base_to_joint1', 4, -1, -1, 0, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint1', (0.0, 0.0, 0.0), (0.0, 0.0, 0.026), (0.0, 0.0, 0.0, 1.0), 0)
+# (2, b'joint2_to_joint1', 0, 7, 6, 1, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint2', (0.0, 0.0, -1.0), (0.0, 0.0, 0.13956), (0.0, 0.0, 0.0, 1.0), 1)
+# (3, b'joint3_to_joint2', 0, 8, 7, 1, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint3', (0.0, 0.0, 1.0), (0.0, 0.0, 0.02948), (0.5000018366025517, 0.49999999999662686, -0.49999999999662686, -0.49999816339744835), 2)
+# (4, b'joint4_to_joint3', 0, 9, 8, 1, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint4', (0.0, 0.0, 1.0), (-0.1104, 0.0, -0.01628), (0.0, 0.0, 0.0, 1.0), 3)
+# (5, b'joint5_to_joint4', 0, 10, 9, 1, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint5', (0.0, 0.0, 1.0), (-0.096, 0.0, 0.049339999999999995), (0.0, 0.0, 0.7071080798594737, 0.7071054825112363), 4)
+# (6, b'joint6_to_joint5', 0, 11, 10, 1, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint6', (0.0, 0.0, 1.0), (0.0, -0.07318, 0.01678), (0.49999999999662686, -0.49999999999662686, 0.5000018366025517, -0.49999816339744835), 5)
+# (7, b'joint6output_to_joint6', 0, 12, 11, 1, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint6_flange', (0.0, 0.0, 1.0), (0.0, 0.0456, 0.019), (0.7071080798594737, 0.0, 0.0, 0.7071054825112363), 6)
+# (8, b'joint6output_to_gripper', 4, -1, -1, 0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, b'gripper', (0.0, 0.0, 0.0), (0.0, 0.0, 0.10600000000000001), (0.0, 0.0, 0.0, 1.0), 7)
+JOINT_NAMES = ["joint2", "joint3", "joint4", "joint5", "joint6", "joint6_flange"]
+
 class CobotIK(Node):
     def __init__(self, speed:int = 30):
         if speed < SPEED_MIN or speed > SPEED_MAX:
@@ -109,7 +120,7 @@ class CobotIK(Node):
     
     def update_pybullet(self, angles):
         for i in range(len(angles)):
-            joint_name = f"joint{i+1}"
+            joint_name = JOINT_NAMES[i]
             joint_id = self.link_name_to_id[joint_name]
             joint_angle = DEGREES_TO_RADIANS * angles[i] * JOINT_SIGNS[i]
             self.get_logger().info(f"{joint_name} id {joint_id} to angle {joint_angle}")
@@ -131,6 +142,8 @@ class CobotIK(Node):
         angles[5] = msg.joint_6
         self.update_pybullet(angles)
         self.real_angles = angles
+
+
 
     def get_pose(self, cur_joint_angles: Optional[npt.NDArray[float]] = None,
                  target_frame: str = "gripper") -> Tuple[npt.NDArray[float], npt.NDArray[float]]:
