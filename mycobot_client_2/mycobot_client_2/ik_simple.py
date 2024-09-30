@@ -142,6 +142,7 @@ class CobotIK(Node):
         worldLinkFrameOrientation = link_state[5]
 
         world_orientation = pb.getEulerFromQuaternion(linkWorldOrientation)
+        world_orientation = np.array(world_orientation)
 
         euler_angles = RADIAN_TO_DEGREES * world_orientation
         return linkWorldPosition, euler_angles
@@ -222,14 +223,6 @@ class CobotIK(Node):
         target_frame = msg.frame
         if not target_frame:
             target_frame = "gripper"
-
-        tolerance = self.get_parameter('solution_tol').value
-        step_size = self.get_parameter('step_size').value
-        dampening_factor = self.get_parameter('dampening_factor').value
-        initial_guess_is_cur_pos = self.get_parameter(
-            'initial_guess_is_cur_pos').value
-        max_iterations = self.get_parameter('max_iterations').value
-        use_pybullet = self.get_parameter('use_pybullet').value
 
         angles = self.calculate_ik(position, euler_angles_degrees, target_frame)
 
