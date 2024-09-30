@@ -15,3 +15,7 @@ source install/setup.bash
 export ROS_DOMAIN_ID=10
 ros2 run mycobot_client_2 cobot_client
 ```
+
+
+## Troubleshooting
+If you are running client examples and the pybullet window is coming up but with nothing inside, and you are on a virtual machine, try turning off hardware acceleration in your virtual machine settings.

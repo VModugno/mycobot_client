@@ -108,7 +108,10 @@ class CobotIK(Node):
     
     def update_pybullet(self, angles):
         for i in range(len(angles)):
-            joint_id = self.link_name_to_id[f"joint{i+1}"]
+            joint_name = f"joint{i+1}"
+            joint_id = self.link_name_to_id[joint_name]
+            joint_angle = DEGREES_TO_RADIANS * angles[i]
+            self.get_logger().info(f"{joint_name} id {joint_id} to angle {joint_angle}")
             self.pybullet_client.resetJointState(self.bot_pybullet, joint_id, DEGREES_TO_RADIANS * angles[i])
         self.pybullet_client.stepSimulation()
 
