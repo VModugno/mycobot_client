@@ -60,21 +60,13 @@ class CobotIK(Node):
 
         self.real_angles = np.zeros(NUM_ANGLES)
 
-        self.declare_parameter('max_iterations', 500)
-        self.declare_parameter('solution_tol', 0.001)
-        self.declare_parameter('move_speed', 30)
-        self.declare_parameter('step_size', 0.1)
-        self.declare_parameter('dampening_factor', 0.1)
-        self.declare_parameter('initial_guess_is_cur_pos', True)
-        self.declare_parameter('use_pybullet', True)
-
         self.get_logger().info("start ...")
 
         self.package_share_directory = get_package_share_directory(
             'mycobot_client_2')
         self.conf_file_name = "elephantconfig.json"  # Configuration file for the robot
         self.urdf_file_name = "mycobot_280_pi.urdf"
-        self.urdf_file_full_path_name = os.path.join(self.package_share_directory, self.urdf_file_name)
+        self.urdf_file_full_path_name = os.path.join(self.package_share_directory, "models", self.urdf_file_name)
 
         self.get_logger().info(
             f"share directory {self.package_share_directory}")
