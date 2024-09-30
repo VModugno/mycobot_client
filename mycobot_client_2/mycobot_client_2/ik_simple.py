@@ -227,8 +227,6 @@ class CobotIK(Node):
                                                                             lowerLimits=joint_limits[:, 0],
                                                                             upperLimits=joint_limits[:, 1])
         joint_poses_pybullet = np.array(joint_poses_pybullet)
-        
-        self.update_pybullet(joint_poses_pybullet)
         self.get_logger().debug("pybullet poses")
         self.get_logger().debug(f"{np.array_str(joint_poses_pybullet)}")
         joint_angles = joint_poses_pybullet
