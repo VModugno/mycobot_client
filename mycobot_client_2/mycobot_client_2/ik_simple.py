@@ -38,7 +38,7 @@ JOINT_LIMITS = [[-165, 165], [-165, 165], [-165, 165],
 
 SPEED_MIN = 0
 SPEED_MAX = 100
-JOINT_SIGNS = [-1, 1, 1, 1, 1, 1]
+JOINT_SIGNS = [1, 1, 1, 1, 1, 1]
 
 class CobotIK(Node):
     def __init__(self, speed:int = 30):
