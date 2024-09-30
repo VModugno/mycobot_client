@@ -231,10 +231,11 @@
     <origin xyz= "0 0.0456 0" rpy = "-1.5708 0 0"/>  
   </joint>
 
+  <!--- we can't mount the gripper with no rotation, we mount it with 30 degrees -->
   <joint name="joint6output_to_gripper" type="fixed">
     <parent link="joint6_flange"/>
     <child link="gripper"/>
-    <origin xyz= "0 0 0.1" rpy = "0 0 -0.52"/>  
+    <origin xyz= "0 0 0.1" rpy = "0 0 0.52"/>  
   </joint>
 
 </robot>
