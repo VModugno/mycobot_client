@@ -6,7 +6,6 @@
   <link name="robot_base">
   </link>
 
-
   <link name="g_base">
     <visual>
       <geometry>

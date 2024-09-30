@@ -8,6 +8,11 @@ from mycobot_msgs_2.msg import MycobotPose, MycobotSetAngles
 from mycobot_client_2.ik import CobotIK
 
 
+
+positions_times = [(MycobotPose(frame="gripper", x=0.2, y=0, z=0.2, rx=math.pi, ry=0, rz=0), 5.0),
+                   (MycobotPose(frame="gripper", x=0.2, y=0.15, z=0.2, rx=math.pi, ry=0, rz=0), 5.0),]
+
+
 def get_zero_joints_msg(speed: int):
     zero_joints = MycobotSetAngles()
     zero_val = 0.0
@@ -56,23 +61,15 @@ def main(args=None):
     angular_change_per_second = 15
 
     angle_diff = angular_change_per_second / loop_rate
-    my_pose = MycobotPose()
-    my_pose.frame = frame
-    my_pose.x = 0.04
-    my_pose.y = -0.06
-    my_pose.z = 0.45
-    my_pose.rx = -40.0
-    my_pose.ry = 0.0
-    my_pose.rz = cur_angle
 
     while rclpy.ok() and time.time() - start_time < demo_time:
-        my_pose.rz = cur_angle
-        cobot_ik.set_pose(my_pose)
-        cur_angle += angle_diff * cur_sign
-        if cur_angle > max_angle:
-            cur_sign = -1
-        elif cur_angle < min_angle:
-            cur_sign = 1
+
+        for pose_time in positions_times:
+            pose = pose_time[0]
+            slp_time = pose_time[1]
+            cobot_ik.set_pose(pose)
+            rclpy.sleep(slp_time)
+
         rate.sleep()
 
     # Destroy the node explicitly
