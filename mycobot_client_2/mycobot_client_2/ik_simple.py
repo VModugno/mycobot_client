@@ -15,6 +15,7 @@ from typing import Tuple, Optional
 from ament_index_python.packages import get_package_share_directory
 import pybullet as pb
 import pybullet_data
+from pybullet_utils import bullet_client
 
 
 COBOT_JOINT_GOAL_TOPIC = "mycobot/angles_goal"
@@ -79,7 +80,7 @@ class CobotIK(Node):
             f"share directory {self.package_share_directory}")
 
         # here i need to create the environment and get the robot object
-        self.pybullet_client = pb.connect(pb.GUI)
+        self.pybullet_client = bullet_client.BulletClient(connection_mode=pb.GUI)
         self.pybullet_client.setPhysicsEngineParameter(numSolverIterations=30)
         self.pybullet_client.setTimeStep(0.001)
         self.pybullet_client.setGravity(0, 0, -9.81)
