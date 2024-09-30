@@ -235,7 +235,7 @@
   <joint name="joint6output_to_gripper" type="fixed">
     <parent link="joint6_flange"/>
     <child link="gripper"/>
-    <origin xyz= "0 0 0.1" rpy = "0 0 0.5236"/>  
+    <origin xyz= "0 0 0.1" rpy = "0 0 -0.5236"/>  
   </joint>
 
 </robot>
