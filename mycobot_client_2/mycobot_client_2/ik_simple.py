@@ -104,6 +104,11 @@ class CobotIK(Node):
         for i in range(num_joints):
             joint_info = pybullet_client.getJointInfo(self.bot_pybullet, i)
             self.link_name_to_id[joint_info[12].decode("UTF-8")] = joint_info[0]
+    
+    def update_pybullet(self, angles):
+        for i in range(len(angles)):
+            joint_id = self.link_name_to_id[f"joint{i+1}"]
+            self.pybullet_client.resetJointState(self.bot_pybullet, joint_id, DEGREES_TO_RADIANS * angles[i])
 
     def update_real_angles(self, msg: MycobotAngles):
         """Helper function to be called in a ROS2 callback that takes the message and stores it in a numpy array in the class.
@@ -118,9 +123,7 @@ class CobotIK(Node):
         angles[3] = msg.joint_4
         angles[4] = msg.joint_5
         angles[5] = msg.joint_6
-        for i in range(6):
-            joint_id = self.link_name_to_id[f"joint{i+1}"]
-            self.pybullet_client.resetJointState(self.bot_pybullet, joint_id, DEGREES_TO_RADIANS * angles[i])
+        self.update_pybullet(angles)
         self.real_angles = angles
 
     def get_pose(self, cur_joint_angles: Optional[npt.NDArray[float]] = None,
@@ -149,9 +152,14 @@ class CobotIK(Node):
 
         world_orientation = pb.getEulerFromQuaternion(linkWorldOrientation)
         world_orientation = np.array(world_orientation)
+        world_link_frame_orientation = pb.getEulerFromQuaternion(worldLinkFrameOrientation)
+        world_link_frame_orientation = np.array(world_link_frame_orientation)
 
-        euler_angles = RADIAN_TO_DEGREES * world_orientation
-        return linkWorldPosition, euler_angles
+#        euler_angles = RADIAN_TO_DEGREES * world_orientation
+#        return linkWorldPosition, euler_angles
+        euler_angles = RADIAN_TO_DEGREES * world_link_frame_orientation
+        return worldLinkFramePosition, euler_angles
+
 
 
     def get_real_angles(self) -> npt.NDArray[float]:
@@ -217,7 +225,8 @@ class CobotIK(Node):
                                                                             lowerLimits=joint_limits[:, 0],
                                                                             upperLimits=joint_limits[:, 1])
         joint_poses_pybullet = np.array(joint_poses_pybullet)
-
+        
+        self.update_pybullet(joint_poses_pybullet)
         self.get_logger().debug("pybullet poses")
         self.get_logger().debug(f"{np.array_str(joint_poses_pybullet)}")
         joint_angles = joint_poses_pybullet
