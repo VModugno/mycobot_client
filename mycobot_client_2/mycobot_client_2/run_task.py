@@ -9,8 +9,9 @@ from mycobot_client_2.ik import CobotIK
 
 
 
-positions_times = [(MycobotPose(frame="gripper", x=0.2, y=0.0, z=-0.1, rx=180.0, ry=0.0, rz=-30.0), 5.0),
-                   (MycobotPose(frame="gripper", x=0.2, y=-0.15, z=0.1, rx=180.0, ry=0.0, rz=-30.0), 5.0)]
+positions_times = [(MycobotPose(frame="gripper", x=0.0, y=0.0, z=0.0, rx=180.0, ry=0.0, rz=-30.0), 5.0)] #,
+#                   (MycobotPose(frame="gripper", x=0.2, y=-0.15, z=0.1, rx=180.0, ry=0.0, rz=-30.0), 5.0)]
+
 
 
 

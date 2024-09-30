@@ -14,7 +14,7 @@
         "base_type": ["fixed"],
         "collision_enable": [0],
         "robot_description_model":[""],
-        "urdf_path": ["elephant_description/mycobot_280_pi.urdf"],
+        "urdf_path": ["elephant_description/mycobot_280_pi_simple.urdf"],
         "ros_urdf_path": "",
         "init_link_base_position": [[0, 0, 0.0]],
         "init_link_base_vel": [[0.0, 0.0, 0.0]],
