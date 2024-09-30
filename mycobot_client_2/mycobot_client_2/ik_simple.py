@@ -207,7 +207,7 @@ class CobotIK(Node):
         joint_poses_pybullet = self.pybullet_client.calculateInverseKinematics(pybullet_robot_index,
                                                                             link_id,
                                                                             target_position,
-                                                                            ori_des_quat.coeffs(),
+                                                                            ori_des_quat,
                                                                             lowerLimits=joint_limits[:, 0],
                                                                             upperLimits=joint_limits[:, 1])
         joint_poses_pybullet = np.array(joint_poses_pybullet)
