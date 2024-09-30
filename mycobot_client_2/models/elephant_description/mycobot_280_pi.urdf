@@ -190,7 +190,7 @@
   <joint name="robot_base_to_g_base" type="fixed">
     <parent link="robot_base"/>
     <child link="g_base"/>
-    <origin xyz= "0 0 0.12" rpy = "0 0 0"/>  
+    <origin xyz= "0 0 0.003" rpy = "0 0 0"/>  
   </joint>
 
   <joint name="g_base_to_joint1" type="fixed">
@@ -257,7 +257,7 @@
   <joint name="joint6output_to_gripper" type="fixed">
     <parent link="joint6_flange"/>
     <child link="gripper"/>
-    <origin xyz= "0 0 0.12" rpy = "0 0 0"/>  
+    <origin xyz= "0 0 0.1" rpy = "0 0 0"/>  
   </joint>
 
 </robot>
