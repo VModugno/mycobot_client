@@ -7,23 +7,6 @@
   </link>
 
   <link name="g_base">
-    <visual>
-      <geometry>
-        <mesh filename="G_base_new.dae"/>
-      </geometry>
-      <origin xyz = "0.0 0 -0.03" rpy = "0 0 1.5708"/>
-    </visual>
-    <collision>
-      <geometry>
-        <mesh filename="G_base_new.dae"/>
-      </geometry>
-      <origin xyz = "0.0 0 -0.03" rpy = "0 0 1.5708"/>
-    </collision>
-    <inertial>
-      <mass value="0.2"/>
-      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
-      <origin xyz="0 0 -0.015" rpy="0 0 0"/>
-    </inertial>
   </link>
 
   <link name="joint1">
