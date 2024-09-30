@@ -113,7 +113,7 @@ class CobotIK(Node):
             joint_angle = DEGREES_TO_RADIANS * angles[i] * JOINT_SIGNS[i]
             self.get_logger().info(f"{joint_name} id {joint_id} to angle {joint_angle}")
             self.pybullet_client.resetJointState(self.bot_pybullet, joint_id, joint_angle)
-        self.pybullet_client.stepSimulation()
+        # self.pybullet_client.stepSimulation()
 
     def update_real_angles(self, msg: MycobotAngles):
         """Helper function to be called in a ROS2 callback that takes the message and stores it in a numpy array in the class.
@@ -123,11 +123,11 @@ class CobotIK(Node):
         """
         angles = np.zeros(NUM_ANGLES)
         angles[0] = msg.joint_1
-        angles[1] = msg.joint_2
-        angles[2] = msg.joint_3
-        angles[3] = msg.joint_4
-        angles[4] = msg.joint_5
-        angles[5] = msg.joint_6
+        # angles[1] = msg.joint_2
+        # angles[2] = msg.joint_3
+        # angles[3] = msg.joint_4
+        # angles[4] = msg.joint_5
+        # angles[5] = msg.joint_6
         self.update_pybullet(angles)
         self.real_angles = angles
 
