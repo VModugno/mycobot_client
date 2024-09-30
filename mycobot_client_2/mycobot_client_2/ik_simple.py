@@ -38,7 +38,7 @@ JOINT_LIMITS = [[-165, 165], [-165, 165], [-165, 165],
 
 SPEED_MIN = 0
 SPEED_MAX = 100
-
+JOINT_SIGNS = [-1, 1, 1, 1, 1, 1]
 
 class CobotIK(Node):
     def __init__(self, speed:int = 30):
@@ -110,7 +110,7 @@ class CobotIK(Node):
         for i in range(len(angles)):
             joint_name = f"joint{i+1}"
             joint_id = self.link_name_to_id[joint_name]
-            joint_angle = DEGREES_TO_RADIANS * angles[i]
+            joint_angle = DEGREES_TO_RADIANS * angles[i] * JOINT_SIGNS[i]
             self.get_logger().info(f"{joint_name} id {joint_id} to angle {joint_angle}")
             self.pybullet_client.resetJointState(self.bot_pybullet, joint_id, DEGREES_TO_RADIANS * angles[i])
         self.pybullet_client.stepSimulation()
