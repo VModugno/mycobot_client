@@ -36,9 +36,15 @@ DEGREES_TO_RADIANS = np.pi / 180
 JOINT_LIMITS = [[-165, 165], [-165, 165], [-165, 165],
                 [-165, 165], [-165, 165], [-179, 179]]
 
+SPEED_MIN = 0
+SPEED_MAX = 100
+
 
 class CobotIK(Node):
-    def __init__(self):
+    def __init__(self, speed:int = 30):
+        if speed < SPEED_MIN or speed > SPEED_MAX:
+            raise ValueError(f"speed must be between {SPEED_MIN} and {SPEED_MAX}, {speed} was given")
+        self.speed = speed
         super().__init__('mycobot_ik_client')
 
         self.cmd_angle_pub = self.create_publisher(
@@ -238,7 +244,7 @@ class CobotIK(Node):
         new_joint_msg.joint_4 = adjusted_angles[3]
         new_joint_msg.joint_5 = adjusted_angles[4]
         new_joint_msg.joint_6 = adjusted_angles[5]
-        new_joint_msg.speed = self.get_parameter('move_speed').value
+        new_joint_msg.speed = self.speed
 
         self.cmd_angle_pub.publish(new_joint_msg)
 
