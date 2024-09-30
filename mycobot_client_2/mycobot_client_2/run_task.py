@@ -53,14 +53,7 @@ def main(args=None):
     cur_position, cur_orientation_euler_angles_degrees = cobot_ik.get_pose(
         cur_joint_angles=cur_angles, target_frame=frame)
 
-    min_angle = -210.0
-    max_angle = 90.0
-    cur_angle = min_angle
-    cur_sign = 1
-
     angular_change_per_second = 15
-
-    angle_diff = angular_change_per_second / loop_rate
 
     while rclpy.ok() and time.time() - start_time < demo_time:
 
@@ -68,7 +61,12 @@ def main(args=None):
             pose = pose_time[0]
             slp_time = pose_time[1]
             cobot_ik.set_pose(pose)
-            rclpy.sleep(slp_time)
+            time.sleep(slp_time)
+            
+            cur_position, cur_orientation_euler_angles_degrees = cobot_ik.get_pose(
+                cur_joint_angles=cur_angles, target_frame=frame)
+            print(f"position {cur_position}")
+            print(f"position {cur_orientation_euler_angles_degrees}")
 
         rate.sleep()
 
