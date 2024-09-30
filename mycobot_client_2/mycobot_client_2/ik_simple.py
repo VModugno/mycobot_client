@@ -79,6 +79,7 @@ class CobotIK(Node):
 
         # here i need to create the environment and get the robot object
         self.pybullet_client = bullet_client.BulletClient(connection_mode=pb.GUI)
+        self.pybullet_client.configureDebugVisualizer(pb.COV_ENABLE_RENDERING,1)
         self.pybullet_client.setPhysicsEngineParameter(numSolverIterations=30)
         self.pybullet_client.setTimeStep(0.001)
         self.pybullet_client.setGravity(0, 0, -9.81)
@@ -109,6 +110,7 @@ class CobotIK(Node):
         for i in range(len(angles)):
             joint_id = self.link_name_to_id[f"joint{i+1}"]
             self.pybullet_client.resetJointState(self.bot_pybullet, joint_id, DEGREES_TO_RADIANS * angles[i])
+        self.pybullet_client.step()
 
     def update_real_angles(self, msg: MycobotAngles):
         """Helper function to be called in a ROS2 callback that takes the message and stores it in a numpy array in the class.
