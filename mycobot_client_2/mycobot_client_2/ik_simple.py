@@ -123,11 +123,11 @@ class CobotIK(Node):
         """
         angles = np.zeros(NUM_ANGLES)
         angles[0] = msg.joint_1
-        # angles[1] = msg.joint_2
-        # angles[2] = msg.joint_3
-        # angles[3] = msg.joint_4
-        # angles[4] = msg.joint_5
-        # angles[5] = msg.joint_6
+        angles[1] = msg.joint_2
+        angles[2] = msg.joint_3
+        angles[3] = msg.joint_4
+        angles[4] = msg.joint_5
+        angles[5] = msg.joint_6
         self.update_pybullet(angles)
         self.real_angles = angles
 
