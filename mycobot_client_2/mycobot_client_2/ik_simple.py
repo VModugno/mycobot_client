@@ -66,7 +66,7 @@ class CobotIK(Node):
             'mycobot_client_2')
         self.conf_file_name = "elephantconfig.json"  # Configuration file for the robot
         self.urdf_file_name = "mycobot_280_pi.urdf"
-        self.urdf_file_full_path_name = os.path.join(self.package_share_directory, "models", self.urdf_file_name)
+        self.urdf_file_full_path_name = os.path.join(self.package_share_directory, "models", "elephant_description", self.urdf_file_name)
 
         self.get_logger().info(
             f"share directory {self.package_share_directory}")
