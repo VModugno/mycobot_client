@@ -9,8 +9,8 @@ from mycobot_client_2.ik import CobotIK
 
 
 
-positions_times = [(MycobotPose(frame="gripper", x=0.2, y=0, z=0.2, rx=math.pi, ry=0, rz=0), 5.0),
-                   (MycobotPose(frame="gripper", x=0.2, y=0.15, z=0.2, rx=math.pi, ry=0, rz=0), 5.0),]
+positions_times = [(MycobotPose(frame="gripper", x=0.2, y=0, z=0.2, rx=math.pi, ry=0.0, rz=0.0), 5.0),
+                   (MycobotPose(frame="gripper", x=0.2, y=0.15, z=0.2, rx=math.pi, ry=0.0, rz=0.0), 5.0),]
 
 
 def get_zero_joints_msg(speed: int):
