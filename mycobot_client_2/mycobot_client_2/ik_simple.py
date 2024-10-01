@@ -227,6 +227,18 @@ class CobotIK(Node):
                 angle_degrees_wrapped = joint_max
             new_angles[i] = angle_degrees_wrapped
         return new_angles
+    
+    def _pub_gripper_msg(self, gripper_status: bool):
+        gripper_msg = MycobotGripperStatus()
+        gripper_msg.state = gripper_status
+        gripper_msg.speed = self.speed
+        self.gripper_status_pub.publish(gripper_msg)
+
+    def open_gripper(self):
+        self._pub_gripper_msg(False)
+    
+    def close_gripper(self):
+        self._pub_gripper_msg(True)
 
     def calculate_ik(self, target_position, euler_angles_degrees: Optional[npt.NDArray[float]] = None,
                      target_frame: str = None):

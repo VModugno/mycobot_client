@@ -19,10 +19,12 @@ from mycobot_client_2.ik_simple import CobotIK, RADIAN_TO_DEGREES
 #     pose = MycobotPose(frame="gripper", x=0.15, y=0.0, z=new_x, rx=180.0, ry=0.0, rz=0.0)
 #     positions_times.append((pose, 3.0))
 
-positions_times = [(MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.2, rx=180.0, ry=25.0, rz=0.0), 5.0),
-                    (MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.001, rx=180.0, ry=25.0, rz=0.0), 5.0),
-                    (MycobotPose(frame="gripper", x=0.2, y=0.0, z=-0.03, rx=180.0, ry=25.0, rz=0.0), 7.0),
-                    (MycobotPose(frame="gripper", x=0.2, y=-0.15, z=0.25, rx=180.0, ry=0.0, rz=0.0), 5.0)]
+positions_times = [(MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.2, rx=180.0, ry=25.0, rz=0.0), 2.0, False),
+                    (MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.001, rx=180.0, ry=25.0, rz=0.0), 2.0, False),
+                    (MycobotPose(frame="gripper", x=0.2, y=0.0, z=-0.03, rx=180.0, ry=25.0, rz=0.0), 7.0, False),
+                    (MycobotPose(frame="gripper", x=0.2, y=0.0, z=-0.03, rx=180.0, ry=25.0, rz=0.0), 7.0, True),
+                    (MycobotPose(frame="gripper", x=0.2, y=-0.15, z=0.25, rx=180.0, ry=0.0, rz=0.0), 5.0, True),
+                    (MycobotPose(frame="gripper", x=0.2, y=-0.15, z=0.25, rx=180.0, ry=0.0, rz=0.0), 5.0, False)]
 
 
 
@@ -70,9 +72,15 @@ def main(args=None):
         for pose_time in positions_times:
             pose = pose_time[0]
             slp_time = pose_time[1]
+            close_gripper = pose_time[2]
             command_angles = cobot_ik.calculate_ik(np.array([pose.x, pose.y, pose.z]),
                                                    np.array([pose.rx, pose.ry, pose.rz]), frame)
             cobot_ik.publish_angles(command_angles)
+            if close_gripper:
+                cobot_ik.close_gripper()
+            else:
+                cobot_ik.open_gripper()
+
             start_loop_time = time.time()
             counter = 0
             while time.time() - start_loop_time < slp_time:
