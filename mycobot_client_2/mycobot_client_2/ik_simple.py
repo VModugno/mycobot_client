@@ -245,6 +245,8 @@ class CobotIK(Node):
             ori_des_euler_radians = ori_des_euler_degrees * DEGREES_TO_RADIANS
 
             ori_des_quat = pb.getQuaternionFromEuler(ori_des_euler_radians)
+        if target_frame is None:
+            target_frame = "gripper"
 
         link_id = self.link_name_to_id[target_frame]
         joint_limits = np.array(JOINT_LIMITS)
