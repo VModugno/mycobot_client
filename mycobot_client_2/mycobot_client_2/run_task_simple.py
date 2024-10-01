@@ -52,10 +52,6 @@ def main(args=None):
     frame = "gripper"
 
     cur_angles = cobot_ik.get_real_angles()
-    cur_position, cur_orientation_euler_angles_degrees = cobot_ik.get_pose(
-        cur_joint_angles=cur_angles, target_frame=frame)
-
-    angular_change_per_second = 15
 
     while rclpy.ok() and time.time() - start_time < demo_time:
 
