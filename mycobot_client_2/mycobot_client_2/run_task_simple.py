@@ -7,7 +7,7 @@ from rclpy.node import Node
 import numpy as np
 
 from mycobot_msgs_2.msg import MycobotPose, MycobotSetAngles
-from mycobot_client_2.ik_simple import CobotIK
+from mycobot_client_2.ik_simple import CobotIK, RADIAN_TO_DEGREES
 
 
 
@@ -62,6 +62,7 @@ def main(args=None):
             slp_time = pose_time[1]
             command_angles = cobot_ik.calculate_ik(np.array([pose.x, pose.y, pose.z]),
                                      np.array([pose.rx, pose.ry, pose.rz]), frame)
+            command_angles = RADIAN_TO_DEGREES * command_angles
             cobot_ik.set_pose(pose)
             start_loop_time = time.time()
             while time.time() - start_loop_time < slp_time:
