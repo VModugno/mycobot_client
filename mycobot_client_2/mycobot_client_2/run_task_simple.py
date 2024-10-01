@@ -25,8 +25,8 @@ positions_times = [(MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.2, rx=180.0, 
                     (MycobotPose(frame="gripper", x=0.2, y=0.0, z=-0.01, rx=180.0, ry=25.0, rz=0.0), 3.0, True),
                     (MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.1, rx=180.0, ry=25.0, rz=0.0), 2.0, True),
                     (MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.2, rx=180.0, ry=25.0, rz=0.0), 2.0, True),
-                    (MycobotPose(frame="gripper", x=0.2, y=-0.15, z=0.3, rx=180.0, ry=0.0, rz=0.0), 2.0, True),
-                    (MycobotPose(frame="gripper", x=0.2, y=-0.15, z=0.3, rx=180.0, ry=0.0, rz=0.0), 5.0, False)]
+                    (MycobotPose(frame="gripper", x=0.15, y=-0.15, z=0.3, rx=180.0, ry=10.0, rz=0.0), 2.0, True),
+                    (MycobotPose(frame="gripper", x=0.15, y=-0.15, z=0.3, rx=180.0, ry=10.0, rz=0.0), 5.0, False)]
 
 
 
