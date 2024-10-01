@@ -73,15 +73,18 @@ def main(args=None):
             command_angles = RADIAN_TO_DEGREES * command_angles
             cobot_ik.set_pose(pose)
             start_loop_time = time.time()
+            counter = 0
             while time.time() - start_loop_time < slp_time:
-                print(f"goal: {pose}")
-                p1, o1 = cobot_ik.get_pose(
-                    cur_joint_angles=None, target_frame=frame)
-                cur_angles = cobot_ik.get_real_angles()
-                print(f"position1 {p1}")
-                print(f"orientation1 {o1}")
-                print(f"goal angles: {command_angles}")
-                print(f"cur angles: {cur_angles}")
+                if counter % 20 == 0:
+                    print(f"goal: {pose}")
+                    p1, o1 = cobot_ik.get_pose(
+                        cur_joint_angles=None, target_frame=frame)
+                    cur_angles = cobot_ik.get_real_angles()
+                    print(f"position1 {p1}")
+                    print(f"orientation1 {o1}")
+                    print(f"goal angles: {command_angles}")
+                    print(f"cur angles: {cur_angles}")
+                counter += 1
                 time.sleep(0.01)
 
         rate.sleep()
