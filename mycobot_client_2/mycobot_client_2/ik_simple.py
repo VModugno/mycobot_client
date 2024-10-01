@@ -169,15 +169,14 @@ class CobotIK(Node):
         worldLinkFramePosition = link_state[4]
         worldLinkFrameOrientation = link_state[5]
 
-        world_orientation = pb.getEulerFromQuaternion(linkWorldOrientation)
-        world_orientation = np.array(world_orientation)
+        link_world_orientation = pb.getEulerFromQuaternion(linkWorldOrientation)
+        link_world_orientation = np.array(link_world_orientation)
+        link_world_orientation = RADIAN_TO_DEGREES * link_world_orientation
         world_link_frame_orientation = pb.getEulerFromQuaternion(worldLinkFrameOrientation)
         world_link_frame_orientation = np.array(world_link_frame_orientation)
+        world_link_frame_orientation = RADIAN_TO_DEGREES * world_link_frame_orientation
 
-#        euler_angles = RADIAN_TO_DEGREES * world_orientation
-#        return linkWorldPosition, euler_angles
-        euler_angles = RADIAN_TO_DEGREES * world_link_frame_orientation
-        return worldLinkFramePosition, euler_angles
+        return linkWorldPosition, link_world_orientation, worldLinkFramePosition, world_link_frame_orientation
 
 
 

@@ -66,10 +66,12 @@ def main(args=None):
             start_loop_time = time.time()
             while time.time() - start_loop_time < slp_time:
                 print(f"goal: {pose}")
-                cur_position, cur_orientation_euler_angles_degrees = cobot_ik.get_pose(
-                    cur_joint_angles=cur_angles, target_frame=frame)
-                print(f"position {cur_position}")
-                print(f"orientation {cur_orientation_euler_angles_degrees}")
+                p1, o1, p2, o2 = cobot_ik.get_pose(
+                    cur_joint_angles=None, target_frame=frame)
+                print(f"position1 {p1}")
+                print(f"orientation1 {o1}")
+                print(f"position2 {p2}")
+                print(f"orientation2 {o2}")
                 time.sleep(0.01)
 
         rate.sleep()
