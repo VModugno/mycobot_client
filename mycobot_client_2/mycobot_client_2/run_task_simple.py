@@ -4,13 +4,15 @@ import threading
 import rclpy
 from rclpy.node import Node
 
+import numpy as np
+
 from mycobot_msgs_2.msg import MycobotPose, MycobotSetAngles
 from mycobot_client_2.ik_simple import CobotIK
 
 
 
-positions_times = [(MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.0, rx=180.0, ry=0.0, rz=0.0), 5.0),
-                   (MycobotPose(frame="gripper", x=0.2, y=-0.15, z=0.1, rx=180.0, ry=0.0, rz=0.0), 5.0)]
+positions_times = [(MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.0, rx=180.0, ry=0.0, rz=0.0), 10.0),
+                   (MycobotPose(frame="gripper", x=0.2, y=-0.15, z=0.1, rx=180.0, ry=0.0, rz=0.0), 10.0)]
 
 
 
@@ -37,7 +39,7 @@ def main(args=None):
         target=rclpy.spin, args=(cobot_ik, ), daemon=True)
     thread.start()
 
-    demo_time = 30
+    demo_time = 60
     start_time = time.time()
     loop_rate = 30
     loop_seconds = 1 / loop_rate
@@ -58,16 +60,19 @@ def main(args=None):
         for pose_time in positions_times:
             pose = pose_time[0]
             slp_time = pose_time[1]
+            command_angles = cobot_ik.calculate_ik(np.array([pose.x, pose.y, pose.z]),
+                                     np.array([pose.rx, pose.ry, pose.rz]), frame)
             cobot_ik.set_pose(pose)
             start_loop_time = time.time()
             while time.time() - start_loop_time < slp_time:
                 print(f"goal: {pose}")
-                p1, o1, p2, o2 = cobot_ik.get_pose(
+                p1, o1 = cobot_ik.get_pose(
                     cur_joint_angles=None, target_frame=frame)
+                cur_angles = cobot_ik.get_real_angles()
                 print(f"position1 {p1}")
                 print(f"orientation1 {o1}")
-                print(f"position2 {p2}")
-                print(f"orientation2 {o2}")
+                print(f"goal angles: {command_angles}")
+                print(f"cur angles: {cur_angles}")
                 time.sleep(0.01)
 
         rate.sleep()

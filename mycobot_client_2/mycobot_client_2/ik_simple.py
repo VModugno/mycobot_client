@@ -160,23 +160,16 @@ class CobotIK(Node):
         if cur_joint_angles is None:
             cur_joint_angles = self.get_real_angles()
             cur_joint_angles = DEGREES_TO_RADIANS * cur_joint_angles
-        # getJointState
         joint_id = self.link_name_to_id[target_frame]
         link_state = self.pybullet_client.getLinkState(self.bot_pybullet, joint_id, computeForwardKinematics=True)
 
         linkWorldPosition = link_state[0]
         linkWorldOrientation = link_state[1]
-        worldLinkFramePosition = link_state[4]
-        worldLinkFrameOrientation = link_state[5]
 
         link_world_orientation = pb.getEulerFromQuaternion(linkWorldOrientation)
         link_world_orientation = np.array(link_world_orientation)
         link_world_orientation = RADIAN_TO_DEGREES * link_world_orientation
-        world_link_frame_orientation = pb.getEulerFromQuaternion(worldLinkFrameOrientation)
-        world_link_frame_orientation = np.array(world_link_frame_orientation)
-        world_link_frame_orientation = RADIAN_TO_DEGREES * world_link_frame_orientation
-
-        return linkWorldPosition, link_world_orientation, worldLinkFramePosition, world_link_frame_orientation
+        return linkWorldPosition, link_world_orientation
 
 
 
