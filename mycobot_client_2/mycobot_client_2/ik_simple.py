@@ -105,7 +105,7 @@ class CobotIK(Node):
             [0, 0, 0, 1],
             useFixedBase=True,
             flags=flags)
-        # self.pybullet_client.resetBasePositionAndOrientation(self.bot_pybullet, [0, 0, 0], [0, 0, 0, 1])
+        self.pybullet_client.resetBasePositionAndOrientation(self.bot_pybullet, [0, 0, 0], [0, 0, 0, 1])
         self.link_name_to_id = {}
         self.buildLinkNameToId(self.pybullet_client)
     
@@ -232,9 +232,10 @@ class CobotIK(Node):
         joint_poses_pybullet = self.pybullet_client.calculateInverseKinematics(pybullet_robot_index,
                                                                             link_id,
                                                                             target_position,
-                                                                            ori_des_quat,
-                                                                            lowerLimits=joint_limits[:, 0],
-                                                                            upperLimits=joint_limits[:, 1])
+                                                                            ori_des_quat)
+                                                                            # ,
+                                                                            # lowerLimits=joint_limits[:, 0],
+                                                                            # upperLimits=joint_limits[:, 1])
         joint_poses_pybullet = np.array(joint_poses_pybullet)
         self.get_logger().debug("pybullet poses")
         self.get_logger().debug(f"{np.array_str(joint_poses_pybullet)}")
