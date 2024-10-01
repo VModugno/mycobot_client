@@ -1,3 +1,14 @@
+import time
+import os
+from typing import Tuple, Optional
+
+import numpy as np
+import numpy.typing as npt
+import pybullet as pb
+import pybullet_data
+from pybullet_utils import bullet_client
+
+from ament_index_python.packages import get_package_share_directory
 import rclpy
 from rclpy.node import Node
 
@@ -6,17 +17,6 @@ from mycobot_msgs_2.msg import (MycobotSetAngles,
                                 MycobotAngles,
                                 MycobotPose,
                                 MycobotGripperStatus)
-
-import numpy as np
-import numpy.typing as npt
-import time
-import os
-from typing import Tuple, Optional
-from ament_index_python.packages import get_package_share_directory
-import pybullet as pb
-import pybullet_data
-from pybullet_utils import bullet_client
-
 
 COBOT_JOINT_GOAL_TOPIC = "mycobot/angles_goal"
 COBOT_POSE_GOAL_TOPIC = "mycobot/pose_goal"
@@ -54,7 +54,19 @@ JOINT_NAMES = ["joint2", "joint3", "joint4",
 
 
 class CobotIK(Node):
+    """
+    Class that exposes functions to talk to the robot arm given numpy arrays. It translates these to the needed ros messages. It also calculates IK.
+    """
     def __init__(self, speed: int = 30):
+        """Initialize the sim and such.
+
+        Args:
+            speed (int, optional): how fast should the arm move when given commands. 0-100. Defaults to 30.
+
+        Raises:
+            ValueError: if speed is wrong.
+        """
+
         if speed < SPEED_MIN or speed > SPEED_MAX:
             raise ValueError(
                 f"speed must be between {SPEED_MIN} and {SPEED_MAX}, {speed} was given")
@@ -115,18 +127,26 @@ class CobotIK(Node):
         self.pybullet_client.resetBasePositionAndOrientation(
             self.bot_pybullet, [0, 0, 0], [0, 0, 0, 1])
         self.link_name_to_id = {}
-        self.buildLinkNameToId(self.pybullet_client)
+        self.__buildLinkNameToId(self.pybullet_client)
 
-    def buildLinkNameToId(self, pybullet_client):
-        num_joints = pybullet_client.getNumJoints(self.bot_pybullet)
+    def __buildLinkNameToId(self):
+        """
+        Helper function to populate a datastructure to go from joint name to pybullet joint index.
+        """
+        num_joints = self.pybullet_client.getNumJoints(self.bot_pybullet)
         self.link_name_to_id = {}
         for i in range(num_joints):
-            joint_info = pybullet_client.getJointInfo(self.bot_pybullet, i)
+            joint_info = self.pybullet_client.getJointInfo(self.bot_pybullet, i)
             self.get_logger().info(str(joint_info))
             self.link_name_to_id[joint_info[12].decode(
                 "UTF-8")] = joint_info[0]
 
-    def update_pybullet(self, angles):
+    def update_pybullet(self, angles: npt.NDArray[float]):
+        """Helper function to update the joint positions in pybullet given the joint angles that the robot is at.
+
+        Args:
+            angles (npt.NDArray[float]): 6D array of the joint angles in degrees
+        """
         for i in range(len(angles)):
             joint_name = JOINT_NAMES[i]
             joint_id = self.link_name_to_id[joint_name]
@@ -137,7 +157,12 @@ class CobotIK(Node):
                 self.bot_pybullet, joint_id, joint_angle)
         self.pybullet_client.stepSimulation()
 
-    def update_real_angles(self, angles):
+    def update_real_angles(self, angles: npt.NDArray[float]):
+        """Helper function to take a numpy array and update pybullet as well as the classes' member.
+
+        Args:
+            angles (npt.NDArray[float]): 6D array of the joint angles in degrees
+        """
         self.update_pybullet(angles)
         self.real_angles = angles
 
@@ -161,11 +186,11 @@ class CobotIK(Node):
         """Helper function to get the current pose of the robot from the current angles.
 
         Args:
-            cur_joint_angles (Optional, optional): What current angles to calculate direct kinematics with? 6D numpy array. Defaults to None.
-            target_frame (str, optional): What frame should the pose be in, from frames in the URDF. Defaults to "gripper".
+            cur_joint_angles (Optional[npt.NDArray[float]], optional): What current angles to calculate direct kinematics with? 6D numpy array. Defaults to None.. Defaults to None.
+            target_frame (str, optional): What frame should the pose be in, from frames in the URDF. Defaults to "gripper".. Defaults to "gripper".
 
         Returns:
-            Tuple[npt.NDArray[float], npt.NDArray[float]]: returns position (x, y, z, meters) and orientation (rx, ry, rz, euler angles degrees)
+            Tuple[npt.NDArray[float], npt.NDArray[float]]: _description_
         """
 
         if cur_joint_angles is not None:
@@ -191,14 +216,14 @@ class CobotIK(Node):
         """
         return np.copy(self.real_angles)
 
-    def adjust_angles(self, target_angles):
-        """Takes angles in degrees
+    def adjust_angles(self, target_angles: npt.NDArray[float]) -> npt.NDArray[float]:
+        """Takes angles in degrees. Bounds them and wraps them as needed.
 
         Args:
-            target_angles (_type_): _description_
+            target_angles (npt.NDArray[float]): input angles
 
         Returns:
-            _type_: _description_
+            npt.NDArray[float]: bounded angles
         """
         new_angles = np.copy(target_angles)
         for i in range(new_angles.shape[0]):
@@ -229,26 +254,40 @@ class CobotIK(Node):
         return new_angles
     
     def _pub_gripper_msg(self, gripper_status: bool):
+        """Helper function to publish a gripper message
+
+        Args:
+            gripper_status (bool): True is closed.
+        """
         gripper_msg = MycobotGripperStatus()
         gripper_msg.state = gripper_status
         gripper_msg.speed = self.speed
         self.gripper_status_pub.publish(gripper_msg)
 
     def open_gripper(self):
+        """Open the gripper.
+        """
         self._pub_gripper_msg(False)
     
     def close_gripper(self):
+        """Close the gripper.
+        """
         self._pub_gripper_msg(True)
 
-    def calculate_ik(self, target_position, euler_angles_degrees: Optional[npt.NDArray[float]] = None,
-                     target_frame: str = None):
-        """Takes angles in degrees
+
+    def calculate_ik(self, target_position: npt.NDArray[float], euler_angles_degrees: Optional[npt.NDArray[float]] = None,
+                     target_frame: Optional[str] = None) -> npt.NDArray[float]:
+        """calculate what angles the robot joints should have to reach the targets. Takes angles in degrees.
 
         Args:
-            position (_type_): np.array 3D
-            euler_angles_degrees (_type_): np.array 3D
-            target_frame (_type_): _description_
+            target_position (npt.NDArray[float]): x, y, z
+            euler_angles_degrees (Optional[npt.NDArray[float]], optional): rx, ry, rz, or None. Easier to solve if None. Defaults to None.
+            target_frame (Optional[str], optional): what frame to use for the calcs. Defaults to None.
+
+        Returns:
+            npt.NDArray[float]: the joint angles
         """
+
         ori_des_quat = None
         if euler_angles_degrees is not None:
             rx, ry, rz = euler_angles_degrees
@@ -278,7 +317,7 @@ class CobotIK(Node):
         return joint_angles
 
     def publish_angles(self, angles: npt.NDArray[float]):
-        """Takes angles in degrees
+        """Takes command angles in degrees and publishes them to ros.
 
         Args:
             angles (npt.NDArray[float]): _description_
@@ -297,7 +336,7 @@ class CobotIK(Node):
         self.cmd_angle_pub.publish(new_joint_msg)
 
     def set_pose(self, x: float, y: float, z: float, rx: float, ry: float, rz: float, frame: str = "gripper"):
-        """Takes angles in degrees
+        """Takes angles in degrees, calculates inverse kinematics, and then publishes the output to ROS. Wrapper function.
 
         Args:
             x (float): _description_

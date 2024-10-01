@@ -9,15 +9,6 @@ import numpy as np
 from mycobot_msgs_2.msg import MycobotPose, MycobotSetAngles
 from mycobot_client_2.ik_simple import CobotIK, RADIAN_TO_DEGREES
 
-# positions_times = []
-# start = 0.0
-# end = 0.8
-# num_iterations = 10
-# increment_val = (end - start) / num_iterations
-# for i in range(num_iterations):
-#     new_x = start + (increment_val * i)
-#     pose = MycobotPose(frame="gripper", x=0.15, y=0.0, z=new_x, rx=180.0, ry=0.0, rz=0.0)
-#     positions_times.append((pose, 3.0))
 
 positions_times = [(MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.2, rx=180.0, ry=25.0, rz=0.0), 2.0, False),
                     (MycobotPose(frame="gripper", x=0.2, y=0.0, z=0.001, rx=180.0, ry=25.0, rz=0.0), 2.0, False),
