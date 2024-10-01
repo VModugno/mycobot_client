@@ -70,8 +70,8 @@ def main(args=None):
         for pose_time in positions_times:
             pose = pose_time[0]
             slp_time = pose_time[1]
-            command_angles = cobot_ik.calculate_ik(np.array([pose.x, pose.y, pose.z]))
-                                    #  np.array([pose.rx, pose.ry, pose.rz]), frame)
+            command_angles = cobot_ik.calculate_ik(np.array([pose.x, pose.y, pose.z]),
+                                                   np.array([pose.rx, pose.ry, pose.rz]), frame)
             cobot_ik.publish_angles(command_angles)
             start_loop_time = time.time()
             counter = 0
