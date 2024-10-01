@@ -13,8 +13,9 @@ position_times = []
 start = 0.5
 end = 0.25
 num_iterations = 10
+increment_val = (end - start) / num_iterations
 for i in range(num_iterations):
-    new_x = start + ((end - start) / num_iterations * i)
+    new_x = start + (increment_val * i)
     pose = MycobotPose(frame="gripper", x=new_x, y=0.0, z=0.1, rx=180.0, ry=0.0, rz=0.0), 10.0
     position_times.append((pose, 5))
 
