@@ -72,7 +72,7 @@ class CobotIK(Node):
         self.real_angle_sub = self.create_subscription(
             MycobotAngles,
             COBOT_JOIN_REAL_TOPIC,
-            self.update_real_angles,
+            self.update_angles_msg,
             1)
 
         self.real_angles = np.zeros(NUM_ANGLES)
@@ -127,7 +127,11 @@ class CobotIK(Node):
             self.pybullet_client.resetJointState(self.bot_pybullet, joint_id, joint_angle)
         self.pybullet_client.stepSimulation()
 
-    def update_real_angles(self, msg: MycobotAngles):
+    def update_real_angles(self, angles):
+        self.update_pybullet(angles)
+        self.real_angles = angles
+
+    def update_angles_msg(self, msg: MycobotAngles):
         """Helper function to be called in a ROS2 callback that takes the message and stores it in a numpy array in the class.
 
         Args:
@@ -140,9 +144,7 @@ class CobotIK(Node):
         angles[3] = msg.joint_4
         angles[4] = msg.joint_5
         angles[5] = msg.joint_6
-        self.update_pybullet(angles)
-        self.real_angles = angles
-
+        self.update_real_angles(angles)
 
 
     def get_pose(self, cur_joint_angles: Optional[npt.NDArray[float]] = None,
@@ -157,9 +159,8 @@ class CobotIK(Node):
             Tuple[npt.NDArray[float], npt.NDArray[float]]: returns position (x, y, z, meters) and orientation (rx, ry, rz, euler angles degrees)
         """
 
-        if cur_joint_angles is None:
-            cur_joint_angles = self.get_real_angles()
-            cur_joint_angles = DEGREES_TO_RADIANS * cur_joint_angles
+        if cur_joint_angles is not None:
+            self.update_real_angles(cur_joint_angles)
         joint_id = self.link_name_to_id[target_frame]
         link_state = self.pybullet_client.getLinkState(self.bot_pybullet, joint_id, computeForwardKinematics=True)
 
@@ -182,9 +183,17 @@ class CobotIK(Node):
         return np.copy(self.real_angles)
 
     def adjust_angles(self, target_angles):
+        """Takes angles in degrees
+
+        Args:
+            target_angles (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         new_angles = np.copy(target_angles)
         for i in range(new_angles.shape[0]):
-            angle_degrees = RADIAN_TO_DEGREES * target_angles[i]
+            angle_degrees = target_angles[i]
             angle_degrees_bounded = angle_degrees % 360
 
             if angle_degrees_bounded < 0:
@@ -210,20 +219,23 @@ class CobotIK(Node):
             new_angles[i] = angle_degrees_wrapped
         return new_angles
 
-    def calculate_ik(self, target_position, euler_angles_degrees, target_frame):
-        """_summary_
+    def calculate_ik(self, target_position, euler_angles_degrees: Optional[npt.NDArray[float]] = None,
+                     target_frame: str = None):
+        """Takes angles in degrees
 
         Args:
             position (_type_): np.array 3D
             euler_angles_degrees (_type_): np.array 3D
             target_frame (_type_): _description_
         """
-        rx, ry, rz = euler_angles_degrees
+        ori_des_quat = None
+        if euler_angles_degrees is not None:
+            rx, ry, rz = euler_angles_degrees
 
-        ori_des_euler_degrees = np.array([rx, ry, rz])
-        ori_des_euler_radians = ori_des_euler_degrees * DEGREES_TO_RADIANS
+            ori_des_euler_degrees = np.array([rx, ry, rz])
+            ori_des_euler_radians = ori_des_euler_degrees * DEGREES_TO_RADIANS
 
-        ori_des_quat = pb.getQuaternionFromEuler(ori_des_euler_radians)
+            ori_des_quat = pb.getQuaternionFromEuler(ori_des_euler_radians)
         
         link_id = self.link_name_to_id[target_frame]
         joint_limits = np.array(JOINT_LIMITS)
@@ -232,28 +244,22 @@ class CobotIK(Node):
         joint_poses_pybullet = self.pybullet_client.calculateInverseKinematics(pybullet_robot_index,
                                                                             link_id,
                                                                             target_position,
-                                                                            ori_des_quat)
-                                                                            # ,
-                                                                            # lowerLimits=joint_limits[:, 0],
-                                                                            # upperLimits=joint_limits[:, 1])
+                                                                            ori_des_quat,                                                                           ,
+                                                                            lowerLimits=joint_limits[:, 0],
+                                                                            upperLimits=joint_limits[:, 1])
         joint_poses_pybullet = np.array(joint_poses_pybullet)
+        joint_poses_pybullet = RADIAN_TO_DEGREES * joint_poses_pybullet
         self.get_logger().debug("pybullet poses")
         self.get_logger().debug(f"{np.array_str(joint_poses_pybullet)}")
         joint_angles = joint_poses_pybullet
         return joint_angles
+    
+    def publish_angles(self, angles: npt.NDArray[float]):
+        """Takes angles in degrees
 
-    def set_pose(self, msg):
-        position = np.array([msg.x, msg.y, msg.z])
-        euler_angles_degrees = np.array([msg.rx, msg.ry, msg.rz])
-        target_frame = msg.frame
-        if not target_frame:
-            target_frame = "gripper"
-
-        angles = self.calculate_ik(position, euler_angles_degrees, target_frame)
-
-        if angles is None:
-            return
-
+        Args:
+            angles (npt.NDArray[float]): _description_
+        """
         adjusted_angles = self.adjust_angles(angles)
 
         new_joint_msg = MycobotSetAngles()
@@ -266,6 +272,29 @@ class CobotIK(Node):
         new_joint_msg.speed = self.speed
 
         self.cmd_angle_pub.publish(new_joint_msg)
+
+    def set_pose(self, x: float, y: float, z: float, rx:float, ry: float, rz: float, frame: str = "gripper"):
+        """Takes angles in degrees
+
+        Args:
+            x (float): _description_
+            y (float): _description_
+            z (float): _description_
+            rx (float): _description_
+            ry (float): _description_
+            rz (float): _description_
+            frame (str, optional): _description_. Defaults to "gripper".
+        """
+        position = np.array([x, y, z])
+        euler_angles_degrees = np.array([rx, ry, rz])
+        if not frame:
+            frame = "gripper"
+
+        angles = self.calculate_ik(position, euler_angles_degrees, frame)
+
+        if angles is None:
+            return
+        self.publish_angles(angles)
 
 
 def main(args=None):
