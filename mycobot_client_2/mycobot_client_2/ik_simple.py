@@ -105,7 +105,7 @@ class CobotIK(Node):
             [0, 0, 0, 1],
             useFixedBase=True,
             flags=flags)
-        self.pybullet_client.resetBasePositionAndOrientation(self.bot_pybullet, [0, 0, 0], [0, 0, 0, 1])
+        # self.pybullet_client.resetBasePositionAndOrientation(self.bot_pybullet, [0, 0, 0], [0, 0, 0, 1])
         self.link_name_to_id = {}
         self.buildLinkNameToId(self.pybullet_client)
     
