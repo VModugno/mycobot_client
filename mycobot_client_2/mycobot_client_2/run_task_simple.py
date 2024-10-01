@@ -21,7 +21,8 @@ from mycobot_client_2.ik_simple import CobotIK, RADIAN_TO_DEGREES
 
 positions_times = [(MycobotPose(frame="gripper", x=0.15, y=0.0, z=0.2, rx=180.0, ry=30.0, rz=0.0), 5.0),
                    (MycobotPose(frame="gripper", x=0.15, y=0.0, z=0.1, rx=180.0, ry=30.0, rz=0.0), 5.0),
-                    (MycobotPose(frame="gripper", x=0.15, y=0.0, z=0.005, rx=180.0, ry=30.0, rz=0.0), 5.0),
+                    (MycobotPose(frame="gripper", x=0.15, y=0.0, z=0.05, rx=180.0, ry=30.0, rz=0.0), 5.0),
+                    (MycobotPose(frame="gripper", x=0.15, y=0.0, z=0.001, rx=180.0, ry=30.0, rz=0.0), 5.0),
                     (MycobotPose(frame="gripper", x=0.2, y=-0.15, z=0.4, rx=180.0, ry=30.0, rz=0.0), 5.0)]
 
 
