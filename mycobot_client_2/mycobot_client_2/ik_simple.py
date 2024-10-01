@@ -49,12 +49,15 @@ JOINT_SIGNS = [1, 1, 1, 1, 1, 1]
 # (6, b'joint6_to_joint5', 0, 11, 10, 1, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint6', (0.0, 0.0, 1.0), (0.0, -0.07318, 0.01678), (0.49999999999662686, -0.49999999999662686, 0.5000018366025517, -0.49999816339744835), 5)
 # (7, b'joint6output_to_joint6', 0, 12, 11, 1, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint6_flange', (0.0, 0.0, 1.0), (0.0, 0.0456, 0.019), (0.7071080798594737, 0.0, 0.0, 0.7071054825112363), 6)
 # (8, b'joint6output_to_gripper', 4, -1, -1, 0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, b'gripper', (0.0, 0.0, 0.0), (0.0, 0.0, 0.10600000000000001), (0.0, 0.0, 0.0, 1.0), 7)
-JOINT_NAMES = ["joint2", "joint3", "joint4", "joint5", "joint6", "joint6_flange"]
+JOINT_NAMES = ["joint2", "joint3", "joint4",
+               "joint5", "joint6", "joint6_flange"]
+
 
 class CobotIK(Node):
-    def __init__(self, speed:int = 30):
+    def __init__(self, speed: int = 30):
         if speed < SPEED_MIN or speed > SPEED_MAX:
-            raise ValueError(f"speed must be between {SPEED_MIN} and {SPEED_MAX}, {speed} was given")
+            raise ValueError(
+                f"speed must be between {SPEED_MIN} and {SPEED_MAX}, {speed} was given")
         self.speed = speed
         super().__init__('mycobot_ik_client')
 
@@ -83,21 +86,25 @@ class CobotIK(Node):
             'mycobot_client_2')
         self.conf_file_name = "elephantconfig.json"  # Configuration file for the robot
         self.urdf_file_name = "mycobot_280_pi.urdf"
-        self.urdf_file_full_path_name = os.path.join(self.package_share_directory, "models", "elephant_description", self.urdf_file_name)
+        self.urdf_file_full_path_name = os.path.join(
+            self.package_share_directory, "models", "elephant_description", self.urdf_file_name)
 
         self.get_logger().info(
             f"share directory {self.package_share_directory}")
 
         # here i need to create the environment and get the robot object
-        self.pybullet_client = bullet_client.BulletClient(connection_mode=pb.GUI)
-        self.pybullet_client.configureDebugVisualizer(pb.COV_ENABLE_RENDERING,1)
+        self.pybullet_client = bullet_client.BulletClient(
+            connection_mode=pb.GUI)
+        self.pybullet_client.configureDebugVisualizer(
+            pb.COV_ENABLE_RENDERING, 1)
         self.pybullet_client.setPhysicsEngineParameter(numSolverIterations=30)
         self.pybullet_client.setTimeStep(0.001)
         self.pybullet_client.setGravity(0, 0, -9.81)
         self.pybullet_client.setPhysicsEngineParameter(enableConeFriction=0)
-        self.pybullet_client.setAdditionalSearchPath(pybullet_data.getDataPath())
+        self.pybullet_client.setAdditionalSearchPath(
+            pybullet_data.getDataPath())
         self.ground_body = self.pybullet_client.loadURDF("plane.urdf")
-        
+
         flags = self.pybullet_client.URDF_USE_INERTIA_FROM_FILE | self.pybullet_client.URDF_USE_SELF_COLLISION
         self.bot_pybullet = self.pybullet_client.loadURDF(
             self.urdf_file_full_path_name,
@@ -105,10 +112,10 @@ class CobotIK(Node):
             [0, 0, 0, 1],
             useFixedBase=True,
             flags=flags)
-        self.pybullet_client.resetBasePositionAndOrientation(self.bot_pybullet, [0, 0, 0], [0, 0, 0, 1])
+        self.pybullet_client.resetBasePositionAndOrientation(
+            self.bot_pybullet, [0, 0, 0], [0, 0, 0, 1])
         self.link_name_to_id = {}
         self.buildLinkNameToId(self.pybullet_client)
-    
 
     def buildLinkNameToId(self, pybullet_client):
         num_joints = pybullet_client.getNumJoints(self.bot_pybullet)
@@ -116,15 +123,18 @@ class CobotIK(Node):
         for i in range(num_joints):
             joint_info = pybullet_client.getJointInfo(self.bot_pybullet, i)
             self.get_logger().info(str(joint_info))
-            self.link_name_to_id[joint_info[12].decode("UTF-8")] = joint_info[0]
-    
+            self.link_name_to_id[joint_info[12].decode(
+                "UTF-8")] = joint_info[0]
+
     def update_pybullet(self, angles):
         for i in range(len(angles)):
             joint_name = JOINT_NAMES[i]
             joint_id = self.link_name_to_id[joint_name]
             joint_angle = DEGREES_TO_RADIANS * angles[i] * JOINT_SIGNS[i]
-            self.get_logger().debug(f"{joint_name} id {joint_id} to angle {joint_angle}")
-            self.pybullet_client.resetJointState(self.bot_pybullet, joint_id, joint_angle)
+            self.get_logger().debug(
+                f"{joint_name} id {joint_id} to angle {joint_angle}")
+            self.pybullet_client.resetJointState(
+                self.bot_pybullet, joint_id, joint_angle)
         self.pybullet_client.stepSimulation()
 
     def update_real_angles(self, angles):
@@ -146,7 +156,6 @@ class CobotIK(Node):
         angles[5] = msg.joint_6
         self.update_real_angles(angles)
 
-
     def get_pose(self, cur_joint_angles: Optional[npt.NDArray[float]] = None,
                  target_frame: str = "gripper") -> Tuple[npt.NDArray[float], npt.NDArray[float]]:
         """Helper function to get the current pose of the robot from the current angles.
@@ -162,17 +171,17 @@ class CobotIK(Node):
         if cur_joint_angles is not None:
             self.update_real_angles(cur_joint_angles)
         joint_id = self.link_name_to_id[target_frame]
-        link_state = self.pybullet_client.getLinkState(self.bot_pybullet, joint_id, computeForwardKinematics=True)
+        link_state = self.pybullet_client.getLinkState(
+            self.bot_pybullet, joint_id, computeForwardKinematics=True)
 
         linkWorldPosition = link_state[0]
         linkWorldOrientation = link_state[1]
 
-        link_world_orientation = pb.getEulerFromQuaternion(linkWorldOrientation)
+        link_world_orientation = pb.getEulerFromQuaternion(
+            linkWorldOrientation)
         link_world_orientation = np.array(link_world_orientation)
         link_world_orientation = RADIAN_TO_DEGREES * link_world_orientation
         return linkWorldPosition, link_world_orientation
-
-
 
     def get_real_angles(self) -> npt.NDArray[float]:
         """Helper function to return the current angles.
@@ -236,24 +245,24 @@ class CobotIK(Node):
             ori_des_euler_radians = ori_des_euler_degrees * DEGREES_TO_RADIANS
 
             ori_des_quat = pb.getQuaternionFromEuler(ori_des_euler_radians)
-        
+
         link_id = self.link_name_to_id[target_frame]
         joint_limits = np.array(JOINT_LIMITS)
         pybullet_robot_index = self.bot_pybullet
 
         joint_poses_pybullet = self.pybullet_client.calculateInverseKinematics(pybullet_robot_index,
-                                                                            link_id,
-                                                                            target_position,
-                                                                            ori_des_quat,                                                                           ,
-                                                                            lowerLimits=joint_limits[:, 0],
-                                                                            upperLimits=joint_limits[:, 1])
+                                                                               link_id,
+                                                                               target_position,
+                                                                               ori_des_quat,
+                                                                               lowerLimits=joint_limits[:, 0],
+                                                                               upperLimits=joint_limits[:, 1])
         joint_poses_pybullet = np.array(joint_poses_pybullet)
         joint_poses_pybullet = RADIAN_TO_DEGREES * joint_poses_pybullet
         self.get_logger().debug("pybullet poses")
         self.get_logger().debug(f"{np.array_str(joint_poses_pybullet)}")
         joint_angles = joint_poses_pybullet
         return joint_angles
-    
+
     def publish_angles(self, angles: npt.NDArray[float]):
         """Takes angles in degrees
 
@@ -273,7 +282,7 @@ class CobotIK(Node):
 
         self.cmd_angle_pub.publish(new_joint_msg)
 
-    def set_pose(self, x: float, y: float, z: float, rx:float, ry: float, rz: float, frame: str = "gripper"):
+    def set_pose(self, x: float, y: float, z: float, rx: float, ry: float, rz: float, frame: str = "gripper"):
         """Takes angles in degrees
 
         Args:
