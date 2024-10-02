@@ -20,6 +20,11 @@ ros2 run mycobot_client_2 ik_demo
 ```
 
 ### Writing your Own
+
+For this make a new script in the `mycobot_client_2/mycobot_client_2` folder and structure it off of the `run_task_simple.py` script. You can import the `from mycobot_client_2.ik_simple import CobotIK` class and use it to control the arm in your script. To add your script to the client package you will have to edit the `setup.py` file and then build the package `colcon build --symlink-install` and source it `source install/setup.bash`.
+
+Docs for the `CobotIk` class are below.
+
 ```
 Help on module ik_simple:
 
