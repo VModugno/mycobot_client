@@ -4,8 +4,10 @@ import threading
 import rclpy
 from rclpy.node import Node
 
+import numpy as np
+
 from mycobot_msgs_2.msg import MycobotPose, MycobotSetAngles
-from mycobot_client_2.ik import CobotIK
+from mycobot_client_2.ik_simple import CobotIK, RADIAN_TO_DEGREES
 
 
 def get_zero_joints_msg(speed: int):
@@ -30,7 +32,7 @@ def main(args=None):
         target=rclpy.spin, args=(cobot_ik, ), daemon=True)
     thread.start()
 
-    demo_time = 30
+    demo_time = 60
     start_time = time.time()
     loop_rate = 30
     loop_seconds = 1 / loop_rate
@@ -45,34 +47,36 @@ def main(args=None):
     frame = "gripper"
 
     cur_angles = cobot_ik.get_real_angles()
-    cur_position, cur_orientation_euler_angles_degrees = cobot_ik.get_pose(
-        cur_joint_angles=cur_angles, target_frame=frame)
-
-    min_angle = -210.0
-    max_angle = 90.0
-    cur_angle = min_angle
-    cur_sign = 1
-
-    angular_change_per_second = 15
-
-    angle_diff = angular_change_per_second / loop_rate
-    my_pose = MycobotPose()
-    my_pose.frame = frame
-    my_pose.x = 0.04
-    my_pose.y = -0.06
-    my_pose.z = 0.45
-    my_pose.rx = -40.0
-    my_pose.ry = 0.0
-    my_pose.rz = cur_angle
 
     while rclpy.ok() and time.time() - start_time < demo_time:
-        my_pose.rz = cur_angle
-        cobot_ik.set_pose(my_pose)
-        cur_angle += angle_diff * cur_sign
-        if cur_angle > max_angle:
-            cur_sign = -1
-        elif cur_angle < min_angle:
-            cur_sign = 1
+
+        x = 0.2
+        y = 0.0
+        z = 0.1
+        rx = 180.0
+        ry = 25.0
+        rz = 0.0
+        close_gripper = False
+        counter = 0
+        
+        command_angles = cobot_ik.calculate_ik(np.array([x, y, z]),
+                                                   np.array([rx, ry, rz]), frame)
+        cobot_ik.publish_angles(command_angles)
+        if close_gripper:
+            cobot_ik.close_gripper()
+        else:
+            cobot_ik.open_gripper()
+        if counter % 20 == 0:
+            print(f"goal: {pose}")
+            p1, o1 = cobot_ik.get_pose(
+                cur_joint_angles=None, target_frame=frame)
+            cur_angles = cobot_ik.get_real_angles()
+            print(f"position1 {p1}")
+            print(f"orientation1 {o1}")
+            print(f"goal angles: {command_angles}")
+            print(f"cur angles: {cur_angles}")
+        counter += 1
+
         rate.sleep()
 
     # Destroy the node explicitly
