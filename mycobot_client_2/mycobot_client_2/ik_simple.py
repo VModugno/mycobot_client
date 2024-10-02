@@ -127,7 +127,7 @@ class CobotIK(Node):
         self.pybullet_client.resetBasePositionAndOrientation(
             self.bot_pybullet, [0, 0, 0], [0, 0, 0, 1])
         self.link_name_to_id = {}
-        self.__buildLinkNameToId(self.pybullet_client)
+        self.__buildLinkNameToId()
 
     def __buildLinkNameToId(self):
         """
