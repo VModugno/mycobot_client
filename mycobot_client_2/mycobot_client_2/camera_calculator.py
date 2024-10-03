@@ -2,6 +2,7 @@ from collections import deque
 from dataclasses import dataclass
 import threading
 import struct
+import sys
 
 import rclpy
 from rclpy.node import Node
@@ -107,15 +108,30 @@ class CameraCalculator(Node):
         y = (v - cy) * z / fy
         pixel_colors = color_img.reshape((x.shape[0], 3))
 
-        # 1 channel, with the float in the channel reinterpreted as 3 single-byte values with ranges from 0 to 255. 0xff0000 is red, 0xff00 is green, 0xff is blue.
+        # for the colors of the pointcloud i want one float, where it's 4 bytes, and i have 3 bytes from the 8 bit integers
+        # 0x 0 R G B
+        # this is how rviz2 will work it out
 
-# In C++, int rgb = 0xff0000; float float_rgb = *reinterpret_cast<float*>(&rgb); 
+        packed_as_floats = np.zeros(pixel_colors.shape[0], dtype=np.float32)
 
-# In Python,  float_rgb = struct.unpack('f', struct.pack('i', 0xff0000))[0]
-        rgb = np.bitwise_or(np.left_shift(pixel_colors[:, 0], 4), np.bitwise_or(np.left_shift(pixel_colors[:, 1], 2), pixel_colors[:, 0]))
-        rgb_float = np.array([struct.unpack('f', struct.pack('i', rgb[i])) for i in range(len(rgb))], dtype=np.float32)
+        # there is probably a way to do this without a for loop, but i am tired
+        for i in range(0, pixel_colors.shape[0]):
+            r = pixel_colors[i, 0]
+            g = pixel_colors[i, 1]
+            b = pixel_colors[i, 2]
+            
+            r_b = struct.unpack('>I', struct.pack('>I',r))[0]
+            g_b = struct.unpack('>I', struct.pack('>I',g))[0]
+            b_b = struct.unpack('>I', struct.pack('>I',b))[0]
+            b_final = (r_b << 16) | ((g_b << 8) | b_b)
+            f_final = struct.unpack('<f', struct.pack('>I',b_final))[0]
+            packed_as_floats[i] = f_final
+        self.get_logger().debug("checking bit  calcs")
+        self.get_logger().info(pixel_colors[0])
+        self.get_logger().info(np.unpackbits(pixel_colors[0]))
+        self.get_logger().info(np.unpackbits(packed_as_floats[0:1].view(np.uint8)))
 
-        return np.concatenate((x[:, None], y[:, None], z[:, None], rgb_float), axis=1, dtype=np.float32)
+        return np.concatenate((x[:, None], y[:, None], z[:, None], rgb_float[: None]), axis=1, dtype=np.float32)
 
     def points_to_pountcloud(self, xyz_rgb):
 
@@ -126,17 +142,17 @@ class CameraCalculator(Node):
         # coordinate frame it is represented in. 
         header =  Header(frame_id=self.color_img_frame)
         header.stamp = self.get_clock().now().to_msg()
-        print(xyz_rgb.shape)
-        print(xyz_rgb.dtype)
 
-        # Data size (13025280 bytes) does not match width (407040) times height (1) times point_step (4). Dropping message.
+        
+        endianness = sys.byteorder
+        big_endian = endianness == "big"
 
         return PointCloud2(
             header=header,
             height=1, 
             width=xyz_rgb.shape[0],
             is_dense=False,
-            is_bigendian=False,
+            is_bigendian=big_endian,
             fields=fields,
             point_step=4 * 4, # Every point consists of 4 float32s, so 4 * 4 bytes.
             row_step=4 * xyz_rgb.shape[0],
