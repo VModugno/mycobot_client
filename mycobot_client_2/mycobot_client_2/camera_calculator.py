@@ -14,6 +14,7 @@ from std_msgs.msg import Header
 
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.linalg import eig as eigenValuesAndVectors
 import numpy.typing as npt
 import cv2
 
@@ -46,11 +47,10 @@ YELLOW_CUBE_BOTTOM_RIGHT_COORDS = np.array([0.175, 0.1, 0])
 YELLOW_CUBE_BOTTOM_RIGHT_COORDS_PIXEL = np.array([500, 454])
 
 
-# we have a matrix T whereby cube_world_points = T @ cube_cam_points
 CUBE_WORLD_POINTS = np.array([GREEN_CUBE_BOTTOM_LEFT_COORDS, GREEN_CUBE_TOP_LEFT_COORDS, ORANGE_CUBE_BOTTOM_LEFT_COORDS,
                     ORANGE_CUBE_TOP_LEFT_COORDS, RED_CUBE_BOTTOM_LEFT_COORDS, RED_CUBE_TOP_LEFT_COORDS, YELLOW_CUBE_BOTTOM_LEFT_COORDS, YELLOW_CUBE_BOTTOM_RIGHT_COORDS])
 CUBE_PIXEL_COORDS = np.array([GREEN_CUBE_BOTTOM_LEFT_COORDS_PIXEL, GREEN_CUBE_TOP_LEFT_COORDS_PIXEL, ORANGE_CUBE_BOTTOM_LEFT_COORDS_PIXEL, 
-                ORANGE_CUBE_TOP_LEFT_COORDS_PIXEL, RED_CUBE_TOP_LEFT_COORDS, RED_CUBE_TOP_LEFT_COORDS_PIXEL, YELLOW_CUBE_BOTTOM_LEFT_COORDS_PIXEL, YELLOW_CUBE_BOTTOM_RIGHT_COORDS_PIXEL])
+                ORANGE_CUBE_TOP_LEFT_COORDS_PIXEL, RED_CUBE_BOTTOM_LEFT_COORDS_PIXEL, RED_CUBE_TOP_LEFT_COORDS_PIXEL, YELLOW_CUBE_BOTTOM_LEFT_COORDS_PIXEL, YELLOW_CUBE_BOTTOM_RIGHT_COORDS_PIXEL])
 
 # in cad, in global coordinate system X/Y/Z right handed like ros, we translated in Y, then in Z.
 # then we rotated around z by 45 degrees, then we rotated around y by 45 degrees. This point, is in the middle of the realsense
@@ -92,6 +92,51 @@ POINTCLOUD_TOPIC_NAME = "/camera/pointcloud"
 # https://github.com/IntelRealSense/librealsense/wiki/Projection-in-RealSense-SDK-2.0#depth-image-formats
 DEPTH_SCALE = 0.001
 
+WORLD_ROTATION_MAT = None
+WORLD_TRANSFORM_MAT = None
+
+def get_transform_mat(K):
+    print(K)
+    print(CUBE_WORLD_POINTS.shape)
+    A = np.zeros((2 * CUBE_WORLD_POINTS.shape[0], 9))
+    counter = 0
+    for i in range(CUBE_WORLD_POINTS.shape[0]):
+        xyz_coords = CUBE_WORLD_POINTS[i]
+        pixel_coords = CUBE_PIXEL_COORDS[i]
+        A[i* 2, 0] = -xyz_coords[0]
+        A[i* 2, 1] = -xyz_coords[1]
+        A[i* 2, 2] = -1
+        A[i* 2, 6] = xyz_coords[0] * pixel_coords[0]
+        A[i* 2, 7] = xyz_coords[1] * pixel_coords[0]
+        A[i* 2, 8] = 1 * pixel_coords[0]
+
+        A[i * 2 + 1, 3] = -xyz_coords[0]
+        A[i * 2 + 1, 4] = -xyz_coords[1]
+        A[i * 2 + 1, 5] = -1
+        A[i * 2 + 1, 6] = xyz_coords[0] * pixel_coords[1]
+        A[i * 2 + 1, 7] = xyz_coords[0] * pixel_coords[1]
+        A[i * 2 + 1, 8] = 1 * pixel_coords[1]
+
+    _, _, V = np.linalg.svd(A)
+    H = V[-1].reshape(3, 3)
+
+    KinvH = np.linalg.inv(K) @ H
+
+    KinvH = KinvH / np.linalg.norm(KinvH[:, 0]) # Normalize to the first column
+
+    r0 = KinvH[:, 0]
+    r1 = KinvH[:, 1]
+    r2 = np.cross(r0, r1)
+    t = KinvH[:, 2]
+
+    R = np.column_stack([r0, r1, r2])
+
+
+    print(CUBE_WORLD_POINTS[-1])
+    print(R @ CUBE_WORLD_POINTS[-1] + t)
+    print(CUBE_PIXEL_COORDS[-1])
+    return R, t
+
 @dataclass
 class Images:
     id_num: int
@@ -99,7 +144,7 @@ class Images:
     depth: npt.NDArray[float]
     xyz_rgb: npt.NDArray[np.float32]
     pointcloud_frame: str
-
+    u_v_mapping: npt.NDArray[float]
 
 
 class CameraCalculator(Node):
@@ -191,8 +236,9 @@ class CameraCalculator(Node):
         xyz_rgb_world_frame = self.translate_to_world_frame(xyz_rgb)
         pointcloud = self.points_to_pountcloud(xyz_rgb_world_frame)
         self.pcd_publisher.publish(pointcloud)
+        u_v_mapping = xyz_rgb_world_frame[:, 0:3].reshape((self.color_img_cv.shape[0], self.color_img_cv.shape[1], 3))
         # get a color image and it's ID
-        img = Images(img_id, self.color_img_cv, self.depth_img_cv, xyz_rgb, self.color_img_frame)
+        img = Images(img_id, self.color_img_cv, self.depth_img_cv, xyz_rgb, self.color_img_frame, u_v_mapping)
         return img
 
     def get_3d_points(self, color_img: npt.NDArray[float], depth_img: npt.NDArray[float]):
@@ -274,6 +320,12 @@ class CameraCalculator(Node):
     
     def get_3d_points_from_pixel_point_on_color(self, img: Images, u, v):
 
+        global WORLD_ROTATION_MAT, WORLD_TRANSFORM_MAT
+        if WORLD_ROTATION_MAT is None:
+            WORLD_ROTATION_MAT, WORLD_TRANSFORM_MAT = get_transform_mat(self.color_processed_intrinsics[:3, :3])
+            WORLD_TRANSFORM_MAT = WORLD_TRANSFORM_MAT.reshape((3,1))
+
+        print(img.depth.shape)
         z = DEPTH_SCALE * img.depth[v, u]
 
         fx = self.depth_processed_intrinsics[0, 0]
@@ -283,10 +335,14 @@ class CameraCalculator(Node):
 
         x = (u - cx) * z / fx
         y = (v - cy) * z / fy
-        rgb = 1.0 # dummy float
-        point_in_cam_frame = np.array([[x, y, z, rgb]])
-        point_in_world_frame = self.translate_to_world_frame(point_in_cam_frame)
-        return point_in_cam_frame[:, 0:3].flatten(), point_in_world_frame[:, 0:3].flatten()
+
+        point_in_cam_frame = np.array([[x, y, z]]).T # 3x1
+        print(WORLD_TRANSFORM_MAT)
+        print(point_in_cam_frame.shape)
+        print(WORLD_TRANSFORM_MAT.shape)
+        point_in_world_frame = WORLD_ROTATION_MAT.T @ (point_in_cam_frame - WORLD_TRANSFORM_MAT)
+
+        return point_in_cam_frame, point_in_world_frame
 
 
     def display_img(self, img: Images):
@@ -314,9 +370,10 @@ def main(args=None):
         if img is None:
             camera_calculator.get_logger().error("frame was None")
             continue
-        cam_points, world_points = camera_calculator.get_3d_points_from_pixel_point_on_color(img, 332, 292)
-        camera_calculator.get_logger().info("cam frame: " + np.array_str(cam_points))
-        camera_calculator.get_logger().info("world frame: " + np.array_str(world_points))
+        # cam_points, world_points = camera_calculator.get_3d_points_from_pixel_point_on_color(img, 532, 175)
+        print(img.u_v_mapping[175, 532])
+        # camera_calculator.get_logger().info("cam frame: " + np.array_str(cam_points))
+        # camera_calculator.get_logger().info("world frame: " + np.array_str(world_points))
         camera_calculator.display_img(img)
         rate.sleep()
         
