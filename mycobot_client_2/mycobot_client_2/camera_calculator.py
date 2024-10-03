@@ -23,6 +23,10 @@ DEPTH_CAMERA_TOPIC_NAME = "/camera/realsense2_camera_node/depth/image_rect_raw"
 DEPTH_CAMERA_INFO_TOPIC_NAME = "/camera/realsense2_camera_node/depth/image_rect_raw/camera_info"
 POINTCLOUD_TOPIC_NAME = "/camera/pointcloud"
 
+# d400 series have this set to 1mm by default
+# https://github.com/IntelRealSense/librealsense/wiki/Projection-in-RealSense-SDK-2.0#depth-image-formats
+DEPTH_SCALE = 0.001
+
 @dataclass
 class Images:
     id_num: int
@@ -95,9 +99,16 @@ class CameraCalculator(Node):
         if color_img.shape[0] != depth_img.shape[0] or color_img.shape[1] != depth_img.shape[1]:
             return None
 
-        u = np.arange(0, color_img.shape[0] * color_img.shape[1], 1, dtype=np.float32)
-        v = np.arange(0, color_img.shape[0] * color_img.shape[1], 1, dtype=np.float32)
-        z = depth_img.flatten()
+        num_points = color_img.shape[0] * color_img.shape[1]
+        nx, ny = (color_img.shape[0], color_img.shape[1])
+        x = np.arange(0, color_img.shape[0], 1, dtype=np.float32)
+        y = np.arange(0, color_img.shape[1], 1, dtype=np.float32)
+        u, v = np.meshgrid(x, y)
+        u = u.flatten().astype(np.float32)
+        v = v.flatten().astype(np.float32)
+
+        z = DEPTH_SCALE * depth_img.flatten()
+        z = z.astype(np.float32)
 
         fx = self.depth_processed_intrinsics[0, 0]
         fy = self.depth_processed_intrinsics[1, 1]
