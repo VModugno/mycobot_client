@@ -1,6 +1,7 @@
 from collections import deque
 from dataclasses import dataclass
 import threading
+import struct
 
 import rclpy
 from rclpy.node import Node
@@ -26,7 +27,7 @@ class Images:
     id_num: int
     color: npt.NDArray[float]
     depth: npt.NDArray[float]
-    xyz_rgb: npt.NDArray[float]
+    xyz_rgb: npt.NDArray[np.float32]
     pointcloud_frame: str
 
 
@@ -76,13 +77,16 @@ class CameraCalculator(Node):
     
     def get_images(self):
         if self.color_img_cv is None or self.depth_img_cv is None or self.depth_processed_intrinsics is None:
+            print("none")
             return None
         img_id = self.img_id_counter
         self.img_id_counter += 1
 
-        xyz, rgb = self.get_3d_points(self.color_img_cv, self.depth_img_cv)
+        xyz_rgb = self.get_3d_points(self.color_img_cv, self.depth_img_cv)
+        pointcloud = self.points_to_pountcloud(xyz_rgb)
+        self.pcd_publisher.publish(pointcloud)
         # get a color image and it's ID
-        img = Images(img_id, self.color_img_cv, self.depth_img_cv, xyz, rgb, self.color_img_frame)
+        img = Images(img_id, self.color_img_cv, self.depth_img_cv, xyz_rgb, self.color_img_frame)
         return img
 
     def get_3d_points(self, color_img: npt.NDArray[float], depth_img: npt.NDArray[float]):
@@ -90,42 +94,53 @@ class CameraCalculator(Node):
         if color_img.shape[0] != depth_img.shape[0] or color_img.shape[1] != depth_img.shape[1]:
             return None
 
-        u = np.arange(0, color_img.shape[0] * color_img.shape[1], 1)
-        v = np.arange(0, color_img.shape[0] * color_img.shape[1], 1)
-        depths = depth_img.flatten()
+        u = np.arange(0, color_img.shape[0] * color_img.shape[1], 1, dtype=np.float32)
+        v = np.arange(0, color_img.shape[0] * color_img.shape[1], 1, dtype=np.float32)
+        z = depth_img.flatten()
 
         fx = self.depth_processed_intrinsics[0, 0]
         fy = self.depth_processed_intrinsics[1, 1]
         cx = self.depth_processed_intrinsics[0, 2]
         cy = self.depth_processed_intrinsics[1, 2]
 
-        x = (u - cx) * depths / fx
-        y = (v - cy) * depths / fy
-        z = depths
-        pixel_colors = color_img.reshape((x.shape[0], 3)).astype(np.float32)
-        print(pixel_colors.shape)
+        x = (u - cx) * z / fx
+        y = (v - cy) * z / fy
+        pixel_colors = color_img.reshape((x.shape[0], 3))
 
-        return np.hstack([x, y, z, pixel_colors])
+        # 1 channel, with the float in the channel reinterpreted as 3 single-byte values with ranges from 0 to 255. 0xff0000 is red, 0xff00 is green, 0xff is blue.
+
+# In C++, int rgb = 0xff0000; float float_rgb = *reinterpret_cast<float*>(&rgb); 
+
+# In Python,  float_rgb = struct.unpack('f', struct.pack('i', 0xff0000))[0]
+        rgb = np.bitwise_or(np.left_shift(pixel_colors[:, 0], 4), np.bitwise_or(np.left_shift(pixel_colors[:, 1], 2), pixel_colors[:, 0]))
+        rgb_float = np.array([struct.unpack('f', struct.pack('i', rgb[i])) for i in range(len(rgb))], dtype=np.float32)
+
+        return np.concatenate((x[:, None], y[:, None], z[:, None], rgb_float), axis=1, dtype=np.float32)
 
     def points_to_pountcloud(self, xyz_rgb):
 
         fields = [PointField(name=n, offset=i*4, datatype=PointField.FLOAT32, count=1) for i, n in enumerate('xyz')]
-        fields += [PointField(name=n, offset=3*4 + i*1, datatype=PointField.UINT8, count=1) for i, n in enumerate('rgb')]
+        fields += [PointField(name="rgb", offset=3*4, datatype=PointField.FLOAT32, count=1)]
 
         # The PointCloud2 message also has a header which specifies which 
         # coordinate frame it is represented in. 
         header =  Header(frame_id=self.color_img_frame)
+        header.stamp = self.get_clock().now().to_msg()
+        print(xyz_rgb.shape)
+        print(xyz_rgb.dtype)
 
-        return sensor_msgs.PointCloud2(
+        # Data size (13025280 bytes) does not match width (407040) times height (1) times point_step (4). Dropping message.
+
+        return PointCloud2(
             header=header,
             height=1, 
-            width=points.shape[0],
+            width=xyz_rgb.shape[0],
             is_dense=False,
             is_bigendian=False,
             fields=fields,
-            point_step=(itemsize * 3), # Every point consists of three float32s.
-            row_step=(itemsize * 3 * points.shape[0]),
-            data=data
+            point_step=4 * 4, # Every point consists of 4 float32s, so 4 * 4 bytes.
+            row_step=4 * xyz_rgb.shape[0],
+            data=xyz_rgb.tobytes()
         )
 
 
@@ -150,10 +165,11 @@ def main(args=None):
     rate = camera_calculator.create_rate(30)
 
     while rclpy.ok():
+        print("getting image")
         img = camera_calculator.get_images()
         if img is None:
             continue
-        camera_calculator.display_img(img)
+        # camera_calculator.display_img(img)
         rate.sleep()
         
     
