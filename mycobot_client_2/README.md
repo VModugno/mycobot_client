@@ -19,3 +19,11 @@ To visualize
 apt install ros-humble-joint-state-publisher ros-humble-joint-state-publisher-gui ros-humble-xacro
 ros2 launch mycobot_client_2 display.launch.py urdf_package:=mycobot_client_2 urdf_package_path:=models/elephant_description/mycobot_280_pi.urdf
 ```
+
+# Camera Dev
+To do camera dev, it is often very useful to record rosbag(s).
+
+```
+ros2 bag record /camera/realsense2_camera_node/color/image_rect_raw /camera/realsense2_camera_node/color/image_rect_raw/camera_info /camera/realsense2_camera_node/depth/image_rect_raw /camera/realsense2_camera_node/depth/image_rect_raw/camera_info /tf_static
+ 
+```
