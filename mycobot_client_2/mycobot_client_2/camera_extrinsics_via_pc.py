@@ -89,10 +89,10 @@ def main():
     N_CORNERS_Y = 9
     CHESSBOARD_STARTING_POINT = np.array([0.095, 0.080])
 
-    full_extrinsics = None
+    full_intrinsics = None
 
     with open(os.path.join(file_dir, intrinsics_name), 'rb') as f:
-        full_extrinsics = np.load(f)
+        full_intrinsics = np.load(f)
     
     with open(os.path.join(file_dir, color_img_name_npy), 'rb') as f:
         color_img = np.load(f)
@@ -100,12 +100,18 @@ def main():
     with open(os.path.join(file_dir, depth_img_npy), 'rb') as f:
         depth_img = np.load(f)
 
+    fig, axes = plt.subplots(2, 1, sharex=True, sharey=True)
+    axes[0].imshow(color_img)
+    depth_img = cv2.applyColorMap(cv2.convertScaleAbs(depth_img, alpha=0.03), cv2.COLORMAP_JET)
+    axes[1].imshow(depth_img)
+    plt.show()
+
     # color_img = cv2.imread(os.path.join(file_dir, color_img_name))
     # depth_img = cv2.imread(os.path.join(file_dir, depth_img_name))
-    fx = full_extrinsics[0, 0]
-    fy = full_extrinsics[1, 1]
-    cx = full_extrinsics[0, 2]
-    cy = full_extrinsics[2, 2]
+    fx = full_intrinsics[0, 0]
+    fy = full_intrinsics[1, 1]
+    cx = full_intrinsics[0, 2]
+    cy = full_intrinsics[2, 2]
     depth_intrinsics = Intrinsics(fx, fy, cx, cy)
 
     fig = plt.figure()
@@ -124,6 +130,7 @@ def main():
     #     u, v = corners[i, :]
     #     ax.text(u, v, f"{i}", color="b")
     plt.show()
+
 
     # the opencv find chess board seems to start in bottom left, go forward in x, then at end of x  row
     # go to next
