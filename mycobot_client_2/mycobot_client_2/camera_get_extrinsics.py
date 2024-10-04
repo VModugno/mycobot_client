@@ -1,6 +1,7 @@
 from collections import deque
 from dataclasses import dataclass
 import time
+import os
 import threading
 import struct
 import sys
@@ -112,6 +113,21 @@ class CameraCalculator(Node):
                 time.sleep(0.1)
                 continue
             break
+        file_dir = "/home/mz/mycobot_client/docs/raw_data"
+        color_img_name = "chessboard_color_image.jpg"
+        color_img_name_npy = "chessboard_color_image.npy"
+        depth_img_name = "chessboard_depth_image.jpg"
+        depth_img_npy = "chessboard_depth_image.npy"
+        intrinsics_name = "depth_intrinsics.npy"
+        with open(os.path.join(file_dir, color_img_name_npy), "wb") as file_handle:
+            np.save(file_handle, img.color)
+        with open(os.path.join(file_dir, depth_img_npy), "wb") as file_handle:
+            np.save(file_handle, img.depth)
+        cv2.imwrite(os.path.join(file_dir, color_img_name), img.color)
+        cv2.imwrite(os.path.join(file_dir, depth_img_name), img.depth)
+        with open(os.path.join(file_dir, intrinsics_name), "wb") as file_handle:
+            np.save(file_handle, self.depth_processed_intrinsics)
+
         K = np.copy(self.depth_processed_intrinsics[:3, :3])
         fig = plt.figure()
         ax = plt.subplot()
@@ -176,6 +192,7 @@ class CameraCalculator(Node):
         print("u, v")
         print(p1_u_v)
 
+        print(img.depth.shape)
         depth = img.depth[int(p1_u_v[1]), int(p1_u_v[0])]
         depth = depth * DEPTH_SCALE
         fx = K[0, 0]
