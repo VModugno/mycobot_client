@@ -96,8 +96,8 @@ WORLD_ROTATION_MAT = None
 WORLD_TRANSFORM_MAT = None
 
 def get_transform_mat(K):
+    print("K")
     print(K)
-    print(CUBE_WORLD_POINTS.shape)
     A = np.zeros((2 * CUBE_WORLD_POINTS.shape[0], 9))
     counter = 0
     for i in range(CUBE_WORLD_POINTS.shape[0]):
@@ -130,6 +130,12 @@ def get_transform_mat(K):
     t = KinvH[:, 2]
 
     R = np.column_stack([r0, r1, r2])
+
+    print("R")
+    print(R)
+
+    print("t")
+    print(t)
 
 
     print(CUBE_WORLD_POINTS[-1])
@@ -236,26 +242,34 @@ class CameraCalculator(Node):
         xyz_rgb_world_frame = self.translate_to_world_frame(xyz_rgb)
         pointcloud = self.points_to_pountcloud(xyz_rgb_world_frame)
         self.pcd_publisher.publish(pointcloud)
-        u_v_mapping = xyz_rgb_world_frame[:, 0:3].reshape((self.color_img_cv.shape[0], self.color_img_cv.shape[1], 3))
+        u_v_mapping_world = xyz_rgb_world_frame[:, 0:3].reshape((self.color_img_cv.shape[0], self.color_img_cv.shape[1], 3))
+        u_v_mapping_cam = xyz_rgb[:, 0:3].reshape((self.color_img_cv.shape[0], self.color_img_cv.shape[1], 3))
         # get a color image and it's ID
-        img = Images(img_id, self.color_img_cv, self.depth_img_cv, xyz_rgb, self.color_img_frame, u_v_mapping)
+        img = Images(img_id, self.color_img_cv, self.depth_img_cv, xyz_rgb, self.color_img_frame, u_v_mapping_world, u_v_mapping_cam)
         return img
 
     def get_3d_points(self, color_img: npt.NDArray[float], depth_img: npt.NDArray[float]):
 
         if color_img.shape[0] != depth_img.shape[0] or color_img.shape[1] != depth_img.shape[1]:
             return None
-
-        num_points = color_img.shape[0] * color_img.shape[1]
-        nx, ny = (color_img.shape[0], color_img.shape[1])
-        x = np.arange(0, color_img.shape[0], 1, dtype=np.float32)
-        y = np.arange(0, color_img.shape[1], 1, dtype=np.float32)
+        print("color image shape")
+        print(color_img.shape)
+        ny, nx = (color_img.shape[1], color_img.shape[0])
+        x = np.arange(0, nx, 1, dtype=np.float32)
+        y = np.arange(0, ny, 1, dtype=np.float32)
         u, v = np.meshgrid(x, y)
+        # print("u first 5 in row0")
+        # print(u[0, :5])
+        # print("u first 5 in row1")
+        # print(u[1, :5])
         u = u.flatten().astype(np.float32)
         v = v.flatten().astype(np.float32)
 
+        print(depth_img.flatten()[0:5])
         z = DEPTH_SCALE * depth_img.flatten()
         z = z.astype(np.float32)
+        print(z[0:5])
+
 
         fx = self.depth_processed_intrinsics[0, 0]
         fy = self.depth_processed_intrinsics[1, 1]
@@ -370,7 +384,7 @@ def main(args=None):
         if img is None:
             camera_calculator.get_logger().error("frame was None")
             continue
-        # cam_points, world_points = camera_calculator.get_3d_points_from_pixel_point_on_color(img, 532, 175)
+        cam_points, world_points = camera_calculator.get_3d_points_from_pixel_point_on_color(img, 532, 175)
         print(img.u_v_mapping[175, 532])
         # camera_calculator.get_logger().info("cam frame: " + np.array_str(cam_points))
         # camera_calculator.get_logger().info("world frame: " + np.array_str(world_points))
