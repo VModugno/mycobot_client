@@ -21,7 +21,7 @@ import cv2
 
 # d400 series have this set to 1mm by default
 # https://github.com/IntelRealSense/librealsense/wiki/Projection-in-RealSense-SDK-2.0#depth-image-formats
-DEPTH_SCALE = 0.001
+DEPTH_SCALE_D405 = 0.001
 
 CHESSBOARD_SIZE = 0.02
 N_CORNERS_X = 6
@@ -86,7 +86,14 @@ class CameraCalculator(Node):
     
     def depth_img_cb(self, msg):
         self.depth_img_frame = msg.header.frame_id
+        print(msg.height)
+        print(msg.width)
+        print(msg.encoding)
+        print(msg.is_bigendian)
+        print(msg.step)
+        print(msg.data[0:50])
         self.depth_img_cv = self.br.imgmsg_to_cv2(msg, "16UC1")
+        print(self.depth_img_cv[self.depth_img_cv.shape[1]//2, self.depth_img_cv.shape[0]//2])
     
     def get_images(self):
         if self.color_img_cv is None or self.depth_img_cv is None or self.depth_processed_intrinsics is None:
@@ -194,7 +201,7 @@ class CameraCalculator(Node):
 
         print(img.depth.shape)
         depth = img.depth[int(p1_u_v[1]), int(p1_u_v[0])]
-        depth = depth * DEPTH_SCALE
+        depth = depth * DEPTH_SCALE_D405
         fx = K[0, 0]
         fy = K[1, 1]
         cx = K[0, 2]
