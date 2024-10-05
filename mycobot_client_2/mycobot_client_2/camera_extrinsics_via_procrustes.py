@@ -61,8 +61,6 @@ def main():
     with open(os.path.join(file_dir, intrinsics_name), 'rb') as f:
         full_intrinsics = np.load(f)
 
-    full_intrinsics = np.array([[425.103271484375, 0, 418.78857421875], [425.103271484375, 244.6451416015625, 0.0], [0, 0, 1]])
-    
     with open(os.path.join(file_dir, color_img_name_npy), 'rb') as f:
         color_img = np.load(f)
     
@@ -177,6 +175,14 @@ def main():
     reshaped_xyz_cam = np.vstack((p1_xyz_camera.reshape(3,1), np.ones((1,1))))
     global_recreated_via_transform = transformation @ reshaped_xyz_cam
     print("global_recreated_via_transform")
+    print(global_recreated_via_transform)
+
+    cam_point_chess = np.array([[-0.04158675],
+ [ 0.06369323],
+ [ 0.257     ],
+ [1]])
+    global_recreated_via_transform = transformation @ cam_point_chess
+    print("global_cam_point_chess")
     print(global_recreated_via_transform)
 
 if __name__ == "__main__":
