@@ -148,6 +148,7 @@ def main():
     transformation[0:3, 3] = t[:, 0]
     transformation[3, 3] = 1
 
+    print("transform matrix")
     print(transformation)
 
     p1_xyz_camera = points_camera[0]
@@ -156,21 +157,20 @@ def main():
     p1_xyz_global_recreated = np.matmul(R, p1_xyz_camera.reshape((3,1))) + t
 
 
-    print("xyz global")
+    print("first point xyz global")
     print(p1_xyz_global)
-    print("xyz cam")
+    print("first point xyz cam")
     print(p1_xyz_camera)
-    print("global recreated")
-    print(p1_xyz_global)
+    print("first point global coordinates recreated using transform from camera coordinates")
+    print(p1_xyz_global_recreated)
 
     camera_recreated = R.T @ (p1_xyz_global.reshape((3,1)) - t)
-    print("camera recreated from cam coords")
+    print("first point camera coordinates recreated using transform from global coordinates")
     print(camera_recreated)
 
     
     reshaped_xyz_global = np.vstack((p1_xyz_global.reshape(3,1), np.ones((1,1))))
-    print(reshaped_xyz_global)
-    camera_recreated_via_transform = transformation.T @ reshaped_xyz_global
+    camera_recreated_via_transform = np.linalg.inv(transformation) @ reshaped_xyz_global
     print("camera_recreated_via_transform")
     print(camera_recreated_via_transform)
     
