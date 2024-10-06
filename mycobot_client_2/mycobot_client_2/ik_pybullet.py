@@ -1,3 +1,4 @@
+import copy
 import time
 import os
 from typing import Tuple, Optional
@@ -11,12 +12,14 @@ from pybullet_utils import bullet_client
 from ament_index_python.packages import get_package_share_directory
 import rclpy
 from rclpy.node import Node
+from geometry_msgs.msg import Point
 
 from mycobot_client_2.cobot_client import MycobotClient, CurAngles
 from mycobot_msgs_2.msg import (MycobotSetAngles,
                                 MycobotAngles,
                                 MycobotPose,
                                 MycobotGripperStatus)
+from mycobot_client_2.camera_calculator import OBJECT_FOUND_TOPIC
 
 COBOT_JOINT_GOAL_TOPIC = "mycobot/angles_goal"
 COBOT_POSE_GOAL_TOPIC = "mycobot/pose_goal"
@@ -57,7 +60,7 @@ class CobotIK(Node):
     """
     Class that exposes functions to talk to the robot arm given numpy arrays. It translates these to the needed ros messages. It also calculates IK.
     """
-    def __init__(self, speed: int = 30):
+    def __init__(self, speed: int = 30, object_distance_tol: float = 0.01):
         """Initialize the sim and such.
 
         Args:
@@ -77,6 +80,12 @@ class CobotIK(Node):
             MycobotSetAngles, COBOT_JOINT_GOAL_TOPIC, 1)
         self.gripper_status_pub = self.create_publisher(
             MycobotGripperStatus, COBOT_GRIPPER_STATUS_TOPIC, 1)
+
+        self.object_found_sub = self.create_subscription(
+            Point, OBJECT_FOUND_TOPIC, self.get_obj_found, 1)
+        self.object_found_dict = {} # key is numpy xyz, val is count of objects
+        self.object_distance_tol = object_distance_tol
+        self.object_id_counter = 0
 
         self.pose_sub = self.create_subscription(
             MycobotPose,
@@ -180,6 +189,56 @@ class CobotIK(Node):
         angles[4] = msg.joint_5
         angles[5] = msg.joint_6
         self.update_real_angles(angles)
+
+    def get_obj_found(self, msg):
+        object_coords = [msg.x, msg.y, msg.z]
+        obj_present = False
+        for obj_id in self.object_found_dict.keys():
+            coords = self.object_found_dict[obj_id][1]
+            coords = np.array(coords)
+            if np.linalg.norm(np.array(object_coords) - coords) < self.object_distance_tol:
+                self.object_found_dict[obj_id][0] = self.object_found_dict[obj_id][0] + 1
+                obj_present = True
+        if not obj_present:
+            new_obj_id = self.object_id_counter + 1
+            self.object_id_counter += 1
+            self.object_found_dict[new_obj_id] = [1, object_coords]
+    
+    def get_obj_found_dict(self):
+        return copy.deepcopy(self.object_found_dict)
+
+    def pickup_object(self, object_id: int):
+        object_coords = self.object_found_dict[object_id][1]
+        object_coords = np.array(object_coords)
+        self.get_logger().info("picking up object")
+        self.get_logger().info(np.array_str(object_coords))
+        # try to pickup object, then remove object from dict
+        self.open_gripper()
+        time.sleep(1)
+        
+        # we ignore the z, assume everything is on the table.
+        start_z = 0.5
+        end_z = -0.05
+        num_zs = 8
+        z_wait = 2.0
+
+        gripper_orientation = np.array([180, 0, 0])
+
+        zs = np.linspace(start_z, end_z, num_zs)
+
+        for z in zs:
+            self.get_logger().info(f"going to: {object_coords[0], object_coords[1], z, gripper_orientation[0], gripper_orientation[1], gripper_orientation[2]}")
+            self.set_pose(object_coords[0], object_coords[1], z, gripper_orientation[0], gripper_orientation[1], gripper_orientation[2], frame = "gripper")
+            time.sleep(z_wait)
+
+        time.sleep(2)
+        self.close_gripper()
+        time.sleep(2)
+        self.set_pose(object_coords[0], object_coords[1], start_z, gripper_orientation[0], gripper_orientation[1], gripper_orientation[2], frame = "gripper")
+        time.sleep(7)
+        self.object_found_dict.pop(object_id)
+
+
 
     def get_pose(self, cur_joint_angles: Optional[npt.NDArray[float]] = None,
                  target_frame: str = "gripper") -> Tuple[npt.NDArray[float], npt.NDArray[float]]:

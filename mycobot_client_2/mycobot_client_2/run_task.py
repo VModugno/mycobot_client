@@ -22,6 +22,7 @@ def get_zero_joints_msg(speed: int):
     zero_joints.speed = speed
     return zero_joints
 
+# TODO make a datastructure to keep track of desired pose, gripper status, and perhaps wait time
 
 def main(args=None):
     rclpy.init(args=args)
@@ -58,6 +59,8 @@ def main(args=None):
         rz = 0.0
         close_gripper = False
         counter = 0
+
+        # TODO: modify the below code to use your datastructure and pick up the cube and deposit it at known positions
         
         command_angles = cobot_ik.calculate_ik(np.array([x, y, z]),
                                                    np.array([rx, ry, rz]), frame)
@@ -67,6 +70,7 @@ def main(args=None):
         else:
             cobot_ik.open_gripper()
         if counter % 20 == 0:
+            pose = (np.array([x, y, z]), np.array([rx, ry, rz]))
             print(f"goal: {pose}")
             p1, o1 = cobot_ik.get_pose(
                 cur_joint_angles=None, target_frame=frame)

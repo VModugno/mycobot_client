@@ -1,5 +1,6 @@
-from collections import deque
 from dataclasses import dataclass
+from datetime import datetime
+import os
 import threading
 import time
 from typing import Optional, Tuple
@@ -11,6 +12,7 @@ from rclpy.node import Node
 from cv_bridge import CvBridge
 
 from sensor_msgs.msg import Image, CameraInfo, PointCloud2, PointField
+from geometry_msgs.msg import Point
 from std_msgs.msg import Header
 
 import matplotlib.pyplot as plt
@@ -35,6 +37,7 @@ COLOR_CAMERA_INFO_TOPIC_NAME = "/camera/realsense2_camera_node/color/image_rect_
 DEPTH_CAMERA_TOPIC_NAME = "/camera/realsense2_camera_node/depth/image_rect_raw"
 DEPTH_CAMERA_INFO_TOPIC_NAME = "/camera/realsense2_camera_node/depth/image_rect_raw/camera_info"
 POINTCLOUD_TOPIC_NAME = "/camera/pointcloud"
+OBJECT_FOUND_TOPIC = "/camera/object_found"
 
 # d400 series have this set to 1mm by default, the D405 has 10cm by default, but the ros driver puts this back to 1mm.
 # https://github.com/IntelRealSense/librealsense/wiki/Projection-in-RealSense-SDK-2.0#depth-image-formats
@@ -61,7 +64,7 @@ class CameraCalculator(Node):
     Args:
         Node (_type_): _description_
     """
-    def __init__(self):
+    def __init__(self, img_out_dir: str = None):
         super().__init__('camera_calculator_node')
         self.br = CvBridge()
         self.color_sub = self.create_subscription(
@@ -74,6 +77,7 @@ class CameraCalculator(Node):
             CameraInfo, DEPTH_CAMERA_INFO_TOPIC_NAME, self.depth_img_info_cb, 1)
         self.pcd_publisher = self.create_publisher(
             PointCloud2, POINTCLOUD_TOPIC_NAME, 1)
+        self.object_publisher = self.create_publisher(Point, OBJECT_FOUND_TOPIC, 1)
 
         self.color_img_frame = None
         self.depth_img_frame = None
@@ -81,30 +85,28 @@ class CameraCalculator(Node):
         self.depth_img_cv = None
         self.color_intrinsics = None
         self.depth_intrinsics = None
-        self.viewing_image = False
         self.get_logger().info("Camera to Global transform is: ")
         self.get_logger().info("\n" + np.array_str(CAMERA_FRAME_TO_ROBOT_FRAME_EXTRINSICS))
 
-    def depth_img_info_cb(self, msg):
-        if self.viewing_image:
-            return
+        if img_out_dir is None:
+            img_out_dir = os.path.expanduser("~")
+            img_out_dir = os.path.join(img_out_dir, "img_plots")
+            os.makedirs(img_out_dir, exist_ok=True)
+        self.img_out_dir = img_out_dir
+        self.img_name_fmt = "%Y-%m-%d_%H-%M-%S.%f"
+        self.get_logger().info(f"saving figures to {self.img_out_dir}")
 
+    def depth_img_info_cb(self, msg):
         self.depth_intrinsics = np.array(msg.k).reshape((3, 3))
 
     def color_img_info_cb(self, msg):
-        if self.viewing_image:
-            return
         self.color_intrinsics = np.array(msg.k).reshape((3, 3))
 
     def color_img_cb(self, msg):
-        if self.viewing_image:
-            return
         self.color_img_frame = msg.header.frame_id
         self.color_img_cv = self.br.imgmsg_to_cv2(msg, "rgb8")
 
     def depth_img_cb(self, msg):
-        if self.viewing_image:
-            return
         self.depth_img_frame = msg.header.frame_id
         self.depth_img_cv = self.br.imgmsg_to_cv2(msg, "16UC1")
 
@@ -295,7 +297,6 @@ class CameraCalculator(Node):
             img (Images): _description_
             markpoint_u_v (Optional[Tuple[int, int]], optional): _description_. Defaults to None.
         """
-        self.viewing_image = True
         fig, axes = plt.subplots(2, 1, sharex=True, sharey=True)
         axes[0].imshow(img.color)
         depth_img = cv2.applyColorMap(cv2.convertScaleAbs(
@@ -308,8 +309,38 @@ class CameraCalculator(Node):
         if markpoint_u_v is not None:
             axes[0].plot(markpoint_u_v[0], markpoint_u_v[1], "r+")
             axes[1].plot(markpoint_u_v[0], markpoint_u_v[1], "r+")
-        plt.show()
-        self.viewing_image = False
+        img_name = datetime.now().strftime(self.img_name_fmt) + ".jpg"
+        fig.savefig(os.path.join(self.img_out_dir, img_name))
+        plt.close(fig)
+
+    def display_image_pair(self, image_one: npt.NDArray, image_two: npt.NDArray, markpoint_u_v: Optional[Tuple[int, int]] = None):
+        """Helper function to display an image pair and optionally to mark a point on the image with a cross.
+
+        Args:
+            img (Images): _description_
+            markpoint_u_v (Optional[Tuple[int, int]], optional): _description_. Defaults to None.
+        """
+        fig, axes = plt.subplots(2, 1, sharex=True, sharey=True)
+        axes[0].imshow(image_one)
+        axes[1].imshow(image_two)
+        axes[0].set_ylabel("v")
+        axes[0].set_xlabel("u")
+        axes[1].set_ylabel("v")
+        axes[1].set_xlabel("u")
+        if markpoint_u_v is not None:
+            axes[0].plot(markpoint_u_v[0], markpoint_u_v[1], "r+")
+            axes[1].plot(markpoint_u_v[0], markpoint_u_v[1], "r+")
+        
+        img_name = datetime.now().strftime(self.img_name_fmt) + ".jpg"
+        fig.savefig(os.path.join(self.img_out_dir, img_name))
+        plt.close(fig)
+    
+    def publish_object_found(self, xyz: npt.NDArray[np.float32]):
+        point = Point()
+        point.x = xyz[0]
+        point.y = xyz[1]
+        point.z = xyz[2]
+        self.object_publisher.publish(point)
 
 
 def main(args=None):

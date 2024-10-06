@@ -53,7 +53,8 @@ setup(
             'cobot_ik_demo = mycobot_client_2.ik_demo:main',
             'run_task = mycobot_client_2.run_task:main',
             'camera_calc = mycobot_client_2.camera_calculator:main',
-            'camera_calc_extrinsics = mycobot_client_2.camera_get_extrinsics:main'
+            'run_detection = mycobot_client_2.run_detection:main',
+            'run_task_vision = mycobot_client_2.run_task_vision:main'
         ],
     },
 )
