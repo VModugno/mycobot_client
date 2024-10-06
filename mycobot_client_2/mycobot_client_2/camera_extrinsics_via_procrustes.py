@@ -78,7 +78,7 @@ def main():
     fx = full_intrinsics[0, 0]
     fy = full_intrinsics[1, 1]
     cx = full_intrinsics[0, 2]
-    cy = full_intrinsics[2, 2]
+    cy = full_intrinsics[1, 2]
     depth_intrinsics = Intrinsics(fx, fy, cx, cy)
 
     print("full intrinsics (P)")
@@ -91,6 +91,8 @@ def main():
     ax.set_xlabel("u")
     # get checkerboard
     ret, corners = cv2.findChessboardCorners(color_img, (N_CORNERS_X, N_CORNERS_Y))
+    if not ret:
+        raise RuntimeError
     corners = corners.squeeze()
     print("corners")
     print(np.array_str(corners))
@@ -114,7 +116,8 @@ def main():
             Xg[idx] = x_coord
             Yg[idx] = y_coord
 
-    points_global = np.hstack((Xg[:, None], Yg[:, None], np.zeros((Xg.shape[0], 1))))
+    z_height = 0.0
+    points_global = np.hstack((Xg[:, None], Yg[:, None], np.ones((Xg.shape[0], 1)) * z_height))
 
     print("global points")
     print(np.array_str(points_global))
@@ -149,33 +152,28 @@ def main():
     print("transform matrix")
     print(transformation)
 
-    p1_xyz_camera = points_camera[0]
-    p1_xyz_global = points_global[0]
+    for chess_point_index in range(corners.shape[0]):
+        u, v = corners[chess_point_index]
+        point_cam = points_camera[chess_point_index]
+        point_global = points_global[chess_point_index]
+        recreated_global = transformation @ np.vstack((point_cam.reshape((3,1)), np.ones((1,1))))
+        recreated_camera = np.linalg.inv(transformation) @ np.vstack((point_global.reshape((3,1)), np.ones((1,1))))
+        print(f"chess corner {chess_point_index}")
+        print("u, v")
+        print(u, v)
+        print("camera")
+        print(point_cam)
+        print("global")
+        print(point_global)
+        print("recreated global")
+        print(recreated_global)
+        print("recreated camera")
+        print(recreated_camera)
 
-    p1_xyz_global_recreated = np.matmul(R, p1_xyz_camera.reshape((3,1))) + t
+    for chess_point_index in range(corners.shape[0]):
+        point_cam = points_camera[chess_point_index]
+        print(point_cam[2])
 
-
-    print("first point xyz global")
-    print(p1_xyz_global)
-    print("first point xyz cam")
-    print(p1_xyz_camera)
-    print("first point global coordinates recreated using transform from camera coordinates")
-    print(p1_xyz_global_recreated)
-
-    camera_recreated = R.T @ (p1_xyz_global.reshape((3,1)) - t)
-    print("first point camera coordinates recreated using transform from global coordinates")
-    print(camera_recreated)
-
-    
-    reshaped_xyz_global = np.vstack((p1_xyz_global.reshape(3,1), np.ones((1,1))))
-    camera_recreated_via_transform = np.linalg.inv(transformation) @ reshaped_xyz_global
-    print("camera_recreated_via_transform")
-    print(camera_recreated_via_transform)
-    
-    reshaped_xyz_cam = np.vstack((p1_xyz_camera.reshape(3,1), np.ones((1,1))))
-    global_recreated_via_transform = transformation @ reshaped_xyz_cam
-    print("global_recreated_via_transform")
-    print(global_recreated_via_transform)
 
     cam_point_chess = np.array([[-0.04158675],
  [ 0.06369323],
@@ -184,6 +182,40 @@ def main():
     global_recreated_via_transform = transformation @ cam_point_chess
     print("global_cam_point_chess")
     print(global_recreated_via_transform)
+
+    another_point_on_table = np.array([[-0.13714086],
+ [ 0.03687973],
+ [ 0.277     ],
+ [1]])
+    global_recreated_via_transform = transformation @ another_point_on_table
+    print("global_cam_point_chess 2")
+    print(global_recreated_via_transform)
+
+    u, v = (color_img.shape[1]//2 , color_img.shape[0]//2)
+    cam_coords = deproject_pixel_to_point(depth_intrinsics, (u,v), DEPTH_SCALE * depth_img[v, u])
+    print("middle of img")
+    cam_coords.append(1)
+    cam_coords = np.array(cam_coords).reshape((4,1))
+    print(u, v)
+    print(cam_coords)
+    print(transformation @ cam_coords)
+
+    u, v = (200, 300)
+    cam_coords = deproject_pixel_to_point(depth_intrinsics, (u,v), DEPTH_SCALE * depth_img[v, u])
+    print("other point img")
+    print("intrinsics")
+    print(f"fx {depth_intrinsics.fx}, fy {depth_intrinsics.fy}, cx {depth_intrinsics.ppx} cy {depth_intrinsics.ppy}")
+    print("u, v")
+    print((u, v))
+    print("depth")
+    print(DEPTH_SCALE * depth_img[v, u])
+
+    cam_coords.append(1)
+    cam_coords = np.array(cam_coords).reshape((4,1))
+    print(u, v)
+    print(cam_coords)
+    print(transformation @ cam_coords)
+    
 
 if __name__ == "__main__":
     main()

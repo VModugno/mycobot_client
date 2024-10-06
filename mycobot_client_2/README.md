@@ -43,10 +43,10 @@ It outputs the transform from the camera frame to the robot frame (which is our 
 global_recreated_via_transform = transformation @ xyz_cam
 ```
 
-The below transform matrix was calculated with a Fiducial Residual Error of 0.00679, ~7mm.
+The below transform matrix was calculated with a Fiducial Residual Error of 0.00327, ~3mm.
 ```
-[[-0.66195548, -0.42515663,  0.61729798,  0.12015741],
- [-0.74470073,  0.27958536, -0.6060139,   0.11123769],
- [ 0.08506335, -0.86085647, -0.50168751,  0.44884327],
- [ 0.,          0.,          0.,          1.,        ]]
+[[-0.6905175,  -0.50300851,  0.51977689,  0.0183475],
+ [-0.72207053, 0.43722654, -0.53614093, 0.17781414],
+ [0.0424232,  -0.74553027, -0.6651202,  0.22065401],
+ [0.,        0.,    0.,     1.]]
 ```

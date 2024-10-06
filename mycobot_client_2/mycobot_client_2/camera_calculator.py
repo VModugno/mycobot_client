@@ -18,12 +18,13 @@ import numpy as np
 import numpy.typing as npt
 import cv2
 
-CAMERA_FRAME_TO_ROBOT_FRAME_EXTRINSICS = np.array([[-0.66084513, -0.26978085, 0.70035849, 0.0030016],
-                                                   [-0.74858188, 0.16987259, -
-                                                       0.64091222, 0.18775045],
-                                                   [0.05393414, -0.94781939, -
-                                                       0.31421252, 0.28052536],
-                                                   [0.,       0.,     0.,       1.]], dtype=np.float32)
+# this comes from the camera_extrinsics_via_procrustes script, ty Eddie for the help!
+CAMERA_FRAME_TO_ROBOT_FRAME_EXTRINSICS = np.array([[-0.6905175,  -0.50300851,  0.51977689,  0.0183475],
+                                                   [-0.72207053, 0.43722654, -
+                                                       0.53614093, 0.17781414],
+                                                   [0.0424232,  -0.74553027, -
+                                                       0.6651202,  0.22065401],
+                                                   [0.,        0.,    0.,     1.]], dtype=np.float32)
 
 COLOR_CAMERA_FRAME_ID = "camera_color_optical_frame"
 DEPTH_CAMERA_FRAME_ID = "camera_depth_optical_frame"
@@ -42,6 +43,9 @@ DEPTH_SCALE = 0.001
 
 @dataclass
 class Images:
+    """This is a datastructure to hold color/depth images and intrinsics, as well as the pointcloud.
+    It's a chunky boy, don't hold too many in memory at once.
+    """
     color: npt.NDArray[float]
     depth: npt.NDArray[float]
     intrinsics: npt.NDArray[float]
@@ -50,6 +54,13 @@ class Images:
 
 
 class CameraCalculator(Node):
+    """This is a class to run calculations on the camera images. Like making pointclouds from them and 
+    getting the world coordinates of a pixel in the image. This intended to make it easier for students to write logic
+    to find things in the image and move the robot arm.
+
+    Args:
+        Node (_type_): _description_
+    """
     def __init__(self):
         super().__init__('camera_calculator_node')
         self.br = CvBridge()
@@ -71,24 +82,16 @@ class CameraCalculator(Node):
         self.color_intrinsics = None
         self.depth_intrinsics = None
         self.viewing_image = False
+        self.get_logger().info("Camera to Global transform is: ")
+        self.get_logger().info("\n" + np.array_str(CAMERA_FRAME_TO_ROBOT_FRAME_EXTRINSICS))
 
     def depth_img_info_cb(self, msg):
-        #  the rectified image is given by:
-        #  [u v w]' = P * [X Y Z 1]'
-        #         x = u / w
-        #         y = v / w
-        #  This holds for both images of a stereo pair.
         if self.viewing_image:
             return
 
         self.depth_intrinsics = np.array(msg.k).reshape((3, 3))
 
     def color_img_info_cb(self, msg):
-        #  the rectified image is given by:
-        #  [u v w]' = P * [X Y Z 1]'
-        #         x = u / w
-        #         y = v / w
-        #  This holds for both images of a stereo pair.
         if self.viewing_image:
             return
         self.color_intrinsics = np.array(msg.k).reshape((3, 3))
@@ -105,14 +108,27 @@ class CameraCalculator(Node):
         self.depth_img_frame = msg.header.frame_id
         self.depth_img_cv = self.br.imgmsg_to_cv2(msg, "16UC1")
 
-    def translate_to_world_frame(self, xyz_rgb):
+    def translate_to_world_frame(self, xyz_rgb: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
+        """Helper function to translate a pointcloud with rgb data from camera to world frame.
+
+        Args:
+            xyz_rgb (npt.NDArray[np.float32]): nx4 array. the 4 is x, y, z, and a float containing r,g,b, compressed for rviz.
+
+        Returns:
+            _type_: npt.NDArray[np.float32]: nx4 array, in world coordinates.
+        """
         new_pc = (CAMERA_FRAME_TO_ROBOT_FRAME_EXTRINSICS @ np.hstack(
             (xyz_rgb[:, 0:3], np.ones((xyz_rgb.shape[0], 1))), dtype=np.float32).T).T
         # set RGB back and drop the 1 helper
         new_pc[:, 3] = xyz_rgb[:, 3]
         return new_pc
 
-    def get_images(self):
+    def get_images(self) -> Images:
+        """Helper function to get an image pair and calculate the pointcloud. It will return None if not available, so check for that.
+
+        Returns:
+            Images: object with the image pair, intrinsics, and pointcloud. It's a chunky boy so don't keep too many in memory.
+        """
         if self.color_img_cv is None or self.depth_img_cv is None or self.color_intrinsics is None:
             self.get_logger().error(
                 "color img was none or detph image was none or depth intrinsics was none")
@@ -141,7 +157,18 @@ class CameraCalculator(Node):
 
         return img
 
-    def get_3d_points(self, color_img: npt.NDArray[float], depth_img: npt.NDArray[float], intrinsics: npt.NDArray):
+    def get_3d_points(self, color_img: npt.NDArray[float], depth_img: npt.NDArray[float], intrinsics: npt.NDArray) -> npt.NDArray[np.float32]:
+        """Helper function to get a pointcloud from an image pair and intrinsics. In the Camera frame. It will then take the RGB element and 
+        pack those 3 bytes into a 4 byte float in a way that rviz2 can read.
+
+        Args:
+            color_img (npt.NDArray[float]): _description_
+            depth_img (npt.NDArray[float]): _description_
+            intrinsics (npt.NDArray): _description_
+
+        Returns:
+            npt.NDArray[np.float32]: _description_
+        """
 
         if color_img.shape[0] != depth_img.shape[0] or color_img.shape[1] != depth_img.shape[1]:
             return None
@@ -191,7 +218,17 @@ class CameraCalculator(Node):
             np.unpackbits(packed_as_floats[0:1].view(np.uint8))))
         return np.concatenate((x[:, None], y[:, None], z[:, None], packed_as_floats[:, None]), axis=1, dtype=np.float32)
 
-    def points_to_pountcloud(self, xyz_rgb, frame_id: str):
+    def points_to_pountcloud(self, xyz_rgb: npt.NDArray[np.float32], frame_id: str) -> PointCloud2:
+        """Helper function to take in a numpy pointcloud nx4, where the 4 is x, y, z, and a float containing RGB in a format for rviz.
+        It packs this into a PointCloud2 object that can be published to ROS.
+
+        Args:
+            xyz_rgb (npt.NDArray[np.float32]): numpy pointcloud
+            frame_id (str): what frame to use for the pointcloud.
+
+        Returns:
+            PointCloud2: _description_
+        """
 
         fields = [PointField(name=n, offset=i*4, datatype=PointField.FLOAT32, count=1)
                   for i, n in enumerate('xyz')]
@@ -205,8 +242,6 @@ class CameraCalculator(Node):
 
         endianness = sys.byteorder
         big_endian = endianness == "big"
-        print(xyz_rgb.shape)
-        print(xyz_rgb.dtype)
 
         return PointCloud2(
             header=header,
@@ -221,11 +256,21 @@ class CameraCalculator(Node):
             data=xyz_rgb.tobytes()
         )
 
-    def get_3d_points_from_pixel_point_on_color(self, img: Images, u: int, v: int):
+    def get_3d_points_from_pixel_point_on_color(self, img: Images, u: int, v: int) -> Tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]:
+        """Function to take image pair and intrinsics, and calculate the 3d location in world frame of a pixel. You could use a color mask or 
+        contour stuff to get the center of an object in pixel coordinates, then pass it to this function to get the 3d location
+        of the object in the world frame.
+
+        Args:
+            img (Images): image pair and intrinsics
+            u (int): the u pixel coordinate. Note that in a numpy image the rows correspond to v, the columns to u.
+            v (int): the v pixel coordinate. Note that in a numpy image the rows correspond to v, the columns to u.
+
+        Returns:
+            Tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]: the first array is points in the camera frame, second array is points in the world frame
+        """
 
         depth = DEPTH_SCALE * img.depth[v, u]
-
-        print(img.intrinsics)
 
         fx = img.intrinsics[0, 0]
         fy = img.intrinsics[1, 1]
@@ -244,6 +289,12 @@ class CameraCalculator(Node):
         return point_in_cam_frame, point_in_global_frame
 
     def display_images(self, img: Images, markpoint_u_v: Optional[Tuple[int, int]] = None):
+        """Helper function to display an image pair and optionally to mark a point on the image with a cross.
+
+        Args:
+            img (Images): _description_
+            markpoint_u_v (Optional[Tuple[int, int]], optional): _description_. Defaults to None.
+        """
         self.viewing_image = True
         fig, axes = plt.subplots(2, 1, sharex=True, sharey=True)
         axes[0].imshow(img.color)
@@ -279,20 +330,21 @@ def main(args=None):
             camera_calculator.get_logger().error("frame was None")
             time.sleep(0.1)
             continue
-        break
-    for u in (100, 200, 300, 400, 500, 600, 700, 800):
-        for v in (100, 200, 300, 400):
-            # point_of_interest = (img.color.shape[0]//2, img.color.shape[1]//2)
-            point_of_interest_u_v = np.array((u, v))
-            cam_points, world_points = camera_calculator.get_3d_points_from_pixel_point_on_color(
-                img, point_of_interest_u_v[0], point_of_interest_u_v[1])
-            camera_calculator.get_logger().info(
-                "point_of_interest in u,v, then camera, then world points:")
-            camera_calculator.get_logger().info(np.array_str(point_of_interest_u_v))
-            camera_calculator.get_logger().info(np.array_str(cam_points))
-            camera_calculator.get_logger().info(np.array_str(world_points))
-            camera_calculator.display_images(img, point_of_interest_u_v)
-            rate.sleep()
+
+        for u in (100, 200, 300, 400, 500, 600, 700, 800):
+            for v in (100, 200, 300, 400):
+                point_of_interest_u_v = np.array((u, v))
+                cam_points, world_points = camera_calculator.get_3d_points_from_pixel_point_on_color(
+                    img, point_of_interest_u_v[0], point_of_interest_u_v[1])
+                camera_calculator.get_logger().info(
+                    "point_of_interest in u,v, then camera, then world points:")
+                camera_calculator.get_logger().info(np.array_str(point_of_interest_u_v))
+                camera_calculator.get_logger().info(np.array_str(cam_points))
+                camera_calculator.get_logger().info(np.array_str(world_points))
+                # camera_calculator.display_images(img, point_of_interest_u_v)
+                rate.sleep()
+        rate.sleep()
+
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
