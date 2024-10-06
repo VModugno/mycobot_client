@@ -19,17 +19,43 @@ export ROS_DOMAIN_ID=10
 ros2 run mycobot_client_2 ik_demo
 ```
 
+
 ### Writing your Own
 
-For this make a new script in the `mycobot_client_2/mycobot_client_2` folder and structure it off of the `run_task_simple.py` script. You can import the `from mycobot_client_2.ik_simple import CobotIK` class and use it to control the arm in your script. To add your script to the client package you will have to edit the `setup.py` file and then build the package `colcon build --symlink-install` and source it `source install/setup.bash`.
+For this make a new script in the `mycobot_client_2/mycobot_client_2` folder and structure it off of the `run_task.py` script. You can import the `from mycobot_client_2.ik_pybullet import CobotIK` class and use it to control the arm in your script. To add your script to the client package you will have to edit the `setup.py` file and then build the package `colcon build --symlink-install` and source it `source install/setup.bash`.
+
+### Camera Calibration
+We have [designed a chessboard](https://github.com/VModugno/MycobotProps) that aligns with the robot's coordinate system so that we know where the points on the chessboard are in the robot's system. By using computer vision techniques to find the points on the chessboard in the camera's frame, we can then match the two pointclouds and calculate the rotation and translation from the robot to the camera. This is called the extrinsics.
+
+There is a script in this repo `camera_extrinsics_via_procrustes.py` that does this. You can find some data that will serve as an input into this in the root of this repo in the `docs/raw_data` folder.
+
+![normal_and_depth](./docs/color_and_depth.png)
+![chess_board](./docs/chess_board.png)
+
+It outputs the transform from the camera frame to the robot frame (which is our world frame). To go the other direction invert it. The robot frame is on the table, in the middle of the base. It could be used like:
+
+```python
+global_recreated_via_transform = transformation @ xyz_cam
+```
+
+The below transform matrix was calculated with a Fiducial Residual Error of 0.00327, ~3mm.
+```
+[[-0.6905175,  -0.50300851,  0.51977689,  0.0183475],
+ [-0.72207053, 0.43722654, -0.53614093, 0.17781414],
+ [0.0424232,  -0.74553027, -0.6651202,  0.22065401],
+ [0.,        0.,    0.,     1.]]
+```
+
+
+## Documentation
 
 Docs for the `CobotIk` class are below.
 
 ```
-Help on module ik_simple:
+Help on module ik_pybullet:
 
 NAME
-    ik_simple
+    ik_pybullet
 
 CLASSES
     rclpy.node.Node(builtins.object)
@@ -165,8 +191,154 @@ DATA
         To specify a variable-length tuple of homogeneous type, use Tuple[T, ...].
 
 FILE
-    /home/mz/mycobot_client/mycobot_client_2/mycobot_client_2/ik_simple.py
+    /home/mz/mycobot_client/mycobot_client_2/mycobot_client_2/ik_pybullet.py
 ```
+
+Docs for the `CameraCalculator` class are below.
+```
+Help on module camera_calculator:
+
+NAME
+    camera_calculator
+
+CLASSES
+    builtins.object
+        Images
+    rclpy.node.Node(builtins.object)
+        CameraCalculator
+    
+    class CameraCalculator(rclpy.node.Node)
+     |  This is a class to run calculations on the camera images. Like making pointclouds from them and 
+     |  getting the world coordinates of a pixel in the image. This intended to make it easier for students to write logic
+     |  to find things in the image and move the robot arm.
+     |  
+     |  Args:
+     |      Node (_type_): _description_
+     |  
+     |  Method resolution order:
+     |      CameraCalculator
+     |      rclpy.node.Node
+     |      builtins.object
+     |  
+     |  Methods defined here:
+     |  
+     |  display_images(self, img: camera_calculator.Images, markpoint_u_v: Optional[Tuple[int, int]] = None)
+     |      Helper function to display an image pair and optionally to mark a point on the image with a cross.
+     |      
+     |      Args:
+     |          img (Images): _description_
+     |          markpoint_u_v (Optional[Tuple[int, int]], optional): _description_. Defaults to None.
+     |  
+     |  get_3d_points(self, color_img: numpy.ndarray[typing.Any, numpy.dtype[float]], depth_img: numpy.ndarray[typing.Any, numpy.dtype[float]], intrinsics: numpy.ndarray[typing.Any, numpy.dtype[+_ScalarType_co]]) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]
+     |      Helper function to get a pointcloud from an image pair and intrinsics. In the Camera frame. It will then take the RGB element and 
+     |      pack those 3 bytes into a 4 byte float in a way that rviz2 can read.
+     |      
+     |      Args:
+     |          color_img (npt.NDArray[float]): _description_
+     |          depth_img (npt.NDArray[float]): _description_
+     |          intrinsics (npt.NDArray): _description_
+     |      
+     |      Returns:
+     |          npt.NDArray[np.float32]: _description_
+     |  
+     |  get_3d_points_from_pixel_point_on_color(self, img: camera_calculator.Images, u: int, v: int) -> Tuple[numpy.ndarray[Any, numpy.dtype[numpy.float32]], numpy.ndarray[Any, numpy.dtype[numpy.float32]]]
+     |      Function to take image pair and intrinsics, and calculate the 3d location in world frame of a pixel. You could use a color mask or 
+     |      contour stuff to get the center of an object in pixel coordinates, then pass it to this function to get the 3d location
+     |      of the object in the world frame.
+     |      
+     |      Args:
+     |          img (Images): image pair and intrinsics
+     |          u (int): the u pixel coordinate. Note that in a numpy image the rows correspond to v, the columns to u.
+     |          v (int): the v pixel coordinate. Note that in a numpy image the rows correspond to v, the columns to u.
+     |      
+     |      Returns:
+     |          Tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]: the first array is points in the camera frame, second array is points in the world frame
+     |  
+     |  get_images(self) -> camera_calculator.Images
+     |      Helper function to get an image pair and calculate the pointcloud. It will return None if not available, so check for that.
+     |      
+     |      Returns:
+     |          Images: object with the image pair, intrinsics, and pointcloud. It's a chunky boy so don't keep too many in memory.
+     |  
+     |  points_to_pountcloud(self, xyz_rgb: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]], frame_id: str) -> sensor_msgs.msg._point_cloud2.PointCloud2
+     |      Helper function to take in a numpy pointcloud nx4, where the 4 is x, y, z, and a float containing RGB in a format for rviz.
+     |      It packs this into a PointCloud2 object that can be published to ROS.
+     |      
+     |      Args:
+     |          xyz_rgb (npt.NDArray[np.float32]): numpy pointcloud
+     |          frame_id (str): what frame to use for the pointcloud.
+     |      
+     |      Returns:
+     |          PointCloud2: _description_
+     |  
+     |  translate_to_world_frame(self, xyz_rgb: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]) -> numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]]
+     |      Helper function to translate a pointcloud with rgb data from camera to world frame.
+     |      
+     |      Args:
+     |          xyz_rgb (npt.NDArray[np.float32]): nx4 array. the 4 is x, y, z, and a float containing r,g,b, compressed for rviz.
+     |      
+     |      Returns:
+     |          _type_: npt.NDArray[np.float32]: nx4 array, in world coordinates.
+     |  
+    class Images(builtins.object)
+     |  Images(color: numpy.ndarray[typing.Any, numpy.dtype[float]], depth: numpy.ndarray[typing.Any, numpy.dtype[float]], intrinsics: numpy.ndarray[typing.Any, numpy.dtype[float]], xyz_rgb: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]], xyz_rgb_frame: str) -> None
+     |  
+     |  This is a datastructure to hold color/depth images and intrinsics, as well as the pointcloud.
+     |  It's a chunky boy, don't hold too many in memory at once.
+     |  
+     |  __init__(self, color: numpy.ndarray[typing.Any, numpy.dtype[float]], depth: numpy.ndarray[typing.Any, numpy.dtype[float]], intrinsics: numpy.ndarray[typing.Any, numpy.dtype[float]], xyz_rgb: numpy.ndarray[typing.Any, numpy.dtype[numpy.float32]], xyz_rgb_frame: str) -> None
+     |      Initialize self.  See help(type(self)) for accurate signature.
+     |  
+DATA
+    CAMERA_FRAME_TO_ROBOT_FRAME_EXTRINSICS = array([[-0.6905175 , -0.50300...
+    COLOR_CAMERA_FRAME_ID = 'camera_color_optical_frame'
+    COLOR_CAMERA_INFO_TOPIC_NAME = '/camera/realsense2_camera_node/color/i...
+    COLOR_CAMERA_TOPIC_NAME = '/camera/realsense2_camera_node/color/image_...
+    DEPTH_CAMERA_FRAME_ID = 'camera_depth_optical_frame'
+    DEPTH_CAMERA_INFO_TOPIC_NAME = '/camera/realsense2_camera_node/depth/i...
+    DEPTH_CAMERA_TOPIC_NAME = '/camera/realsense2_camera_node/depth/image_...
+    DEPTH_SCALE = 0.001
+    Optional = typing.Optional
+        Optional[X] is equivalent to Union[X, None].
+    
+    POINTCLOUD_TOPIC_NAME = '/camera/pointcloud'
+    Tuple = typing.Tuple
+        Deprecated alias to builtins.tuple.
+        
+        Tuple[X, Y] is the cross-product type of X and Y.
+        
+        Example: Tuple[T1, T2] is a tuple of two elements corresponding
+        to type variables T1 and T2.  Tuple[int, float, str] is a tuple
+        of an int, a float and a string.
+        
+        To specify a variable-length tuple of homogeneous type, use Tuple[T, ...].
+    
+    WORLD_FRAME_ID = 'map'
+```
+
 
 ## Troubleshooting
 If you are running client examples and the pybullet window is coming up but with nothing inside, and you are on a virtual machine, try turning off hardware acceleration in your virtual machine settings.
+
+## Camera Dev
+To do camera dev, it is often very useful to record rosbag(s).
+
+```
+ros2 bag record /camera/realsense2_camera_node/color/image_rect_raw /camera/realsense2_camera_node/color/image_rect_raw/camera_info /camera/realsense2_camera_node/depth/image_rect_raw /camera/realsense2_camera_node/depth/image_rect_raw/camera_info /tf_static
+```
+
+You may then play these bag later and work on dev like camera calibration
+
+### Docker
+
+```
+xhost +local:root; sudo docker run -it --network host --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" mzandtheraspberrypi/mycobot-client-humble:1.0.0; xhost -local:root;
+ros2 run mycobot_client_2 cobot_ik
+```
+
+### visualizing frames
+To visualize frames
+```
+apt install ros-humble-joint-state-publisher ros-humble-joint-state-publisher-gui ros-humble-xacro
+ros2 launch mycobot_client_2 display.launch.py urdf_package:=mycobot_client_2 urdf_package_path:=models/elephant_description/mycobot_280_pi.urdf
+```

@@ -7,7 +7,7 @@ from rclpy.node import Node
 import numpy as np
 
 from mycobot_msgs_2.msg import MycobotPose, MycobotSetAngles
-from mycobot_client_2.ik_simple import CobotIK, RADIAN_TO_DEGREES
+from mycobot_client_2.ik_pybullet import CobotIK, RADIAN_TO_DEGREES
 
 
 def get_zero_joints_msg(speed: int):
