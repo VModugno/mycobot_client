@@ -19,9 +19,35 @@ export ROS_DOMAIN_ID=10
 ros2 run mycobot_client_2 ik_demo
 ```
 
+
 ### Writing your Own
 
 For this make a new script in the `mycobot_client_2/mycobot_client_2` folder and structure it off of the `run_task.py` script. You can import the `from mycobot_client_2.ik_pybullet import CobotIK` class and use it to control the arm in your script. To add your script to the client package you will have to edit the `setup.py` file and then build the package `colcon build --symlink-install` and source it `source install/setup.bash`.
+
+### Camera Calibration
+We have [designed a chessboard](https://github.com/VModugno/MycobotProps) that aligns with the robot's coordinate system so that we know where the points on the chessboard are in the robot's system. By using computer vision techniques to find the points on the chessboard in the camera's frame, we can then match the two pointclouds and calculate the rotation and translation from the robot to the camera. This is called the extrinsics.
+
+There is a script in this repo `camera_extrinsics_via_procrustes.py` that does this. You can find some data that will serve as an input into this in the root of this repo in the `docs/raw_data` folder.
+
+![normal_and_depth](./docs/color_and_depth.png)
+![chess_board](./docs/chess_board.png)
+
+It outputs the transform from the camera frame to the robot frame (which is our world frame). To go the other direction invert it. The robot frame is on the table, in the middle of the base. It could be used like:
+
+```python
+global_recreated_via_transform = transformation @ xyz_cam
+```
+
+The below transform matrix was calculated with a Fiducial Residual Error of 0.00327, ~3mm.
+```
+[[-0.6905175,  -0.50300851,  0.51977689,  0.0183475],
+ [-0.72207053, 0.43722654, -0.53614093, 0.17781414],
+ [0.0424232,  -0.74553027, -0.6651202,  0.22065401],
+ [0.,        0.,    0.,     1.]]
+```
+
+
+## Documentation
 
 Docs for the `CobotIk` class are below.
 
@@ -293,3 +319,26 @@ DATA
 
 ## Troubleshooting
 If you are running client examples and the pybullet window is coming up but with nothing inside, and you are on a virtual machine, try turning off hardware acceleration in your virtual machine settings.
+
+## Camera Dev
+To do camera dev, it is often very useful to record rosbag(s).
+
+```
+ros2 bag record /camera/realsense2_camera_node/color/image_rect_raw /camera/realsense2_camera_node/color/image_rect_raw/camera_info /camera/realsense2_camera_node/depth/image_rect_raw /camera/realsense2_camera_node/depth/image_rect_raw/camera_info /tf_static
+```
+
+You may then play these bag later and work on dev like camera calibration
+
+### Docker
+
+```
+xhost +local:root; sudo docker run -it --network host --env="DISPLAY" --env="QT_X11_NO_MITSHM=1" --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" mzandtheraspberrypi/mycobot-client-humble:1.0.0; xhost -local:root;
+ros2 run mycobot_client_2 cobot_ik
+```
+
+### visualizing frames
+To visualize frames
+```
+apt install ros-humble-joint-state-publisher ros-humble-joint-state-publisher-gui ros-humble-xacro
+ros2 launch mycobot_client_2 display.launch.py urdf_package:=mycobot_client_2 urdf_package_path:=models/elephant_description/mycobot_280_pi.urdf
+```
