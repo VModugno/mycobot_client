@@ -33,6 +33,9 @@ def main(args=None):
         # TODO: add logic to detect cubes, perhaps by HSV color and finding contours, and publish the coordinates via camera_calculator.publish_object_found
         out_img = cv2.cvtColor(img.color, cv2.COLOR_RGB2HSV)
         found_obj = False
+        # setting u, v, to center of screen for example purposes
+        u, v = img.color.shape[1]//2, img.color.shape[0]//2
+        camera_frame_coordinates, world_frame_coordinates = camera_calculator.get_3d_points_from_pixel_point_on_color(img, u, v)
         if found_obj:
             world_coords = np.array((0.2, 0.2, 0))
             camera_calculator.publish_object_found(world_coords.reshape((3,)))
