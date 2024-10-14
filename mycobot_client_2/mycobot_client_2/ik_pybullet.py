@@ -261,14 +261,17 @@ class CobotIK(Node):
         Returns:
             Tuple[npt.NDArray[float], npt.NDArray[float]]: _description_
         """
-
+        prior_angles = None
         if cur_joint_angles is not None:
+            prior_angles = self.get_real_angles()
             self.getting_pose = True
             self.update_real_angles(cur_joint_angles)
         joint_id = self.link_name_to_id[target_frame]
         link_state = self.pybullet_client.getLinkState(
             self.bot_pybullet, joint_id, computeForwardKinematics=True)
-        self.getting_pose = False
+        if self.getting_pose and prior_angles is not None:
+            self.getting_pose = False
+            self.update_real_angles(prior_angles)
 
         linkWorldPosition = link_state[0]
         linkWorldOrientation = link_state[1]
