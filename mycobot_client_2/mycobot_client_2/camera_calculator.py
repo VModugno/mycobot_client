@@ -11,7 +11,7 @@ import rclpy
 from rclpy.node import Node
 from cv_bridge import CvBridge
 
-from sensor_msgs.msg import Image, CameraInfo, PointCloud2, PointField
+from sensor_msgs.msg import Image, CompressedImage, CameraInfo, PointCloud2, PointField
 from geometry_msgs.msg import Point
 from std_msgs.msg import Header
 
@@ -33,8 +33,10 @@ DEPTH_CAMERA_FRAME_ID = "camera_depth_optical_frame"
 WORLD_FRAME_ID = "map"
 
 COLOR_CAMERA_TOPIC_NAME = "/camera/realsense2_camera_node/color/image_rect_raw"
+COLOR_CAMERA_COMPRESSED_TOPIC_NAME = "/camera/realsense2_camera_node/color/image_rect_raw/compressed"
 COLOR_CAMERA_INFO_TOPIC_NAME = "/camera/realsense2_camera_node/color/image_rect_raw/camera_info"
 DEPTH_CAMERA_TOPIC_NAME = "/camera/realsense2_camera_node/depth/image_rect_raw"
+DEPTH_CAMERA_COMPRESSED_TOPIC_NAME = "/camera/realsense2_camera_node/depth/image_rect_raw/compressedDepth"
 DEPTH_CAMERA_INFO_TOPIC_NAME = "/camera/realsense2_camera_node/depth/image_rect_raw/camera_info"
 POINTCLOUD_TOPIC_NAME = "/camera/pointcloud"
 OBJECT_FOUND_TOPIC = "/camera/object_found"
@@ -64,13 +66,21 @@ class CameraCalculator(Node):
     Args:
         Node (_type_): _description_
     """
-    def __init__(self, img_out_dir: str = None):
+    def __init__(self, img_out_dir: str = None, use_compressed: bool = True):
         super().__init__('camera_calculator_node')
         self.br = CvBridge()
-        self.color_sub = self.create_subscription(
-            Image, COLOR_CAMERA_TOPIC_NAME, self.color_img_cb, 1)
-        self.depth_sub = self.create_subscription(
-            Image, DEPTH_CAMERA_TOPIC_NAME, self.depth_img_cb, 1)
+        if use_compressed:
+            self.color_sub = self.create_subscription(
+                CompressedImage, COLOR_CAMERA_COMPRESSED_TOPIC_NAME, self.color_img_compressed_cb, 1)
+            # we get problems when trying to use compressed depth images
+            # due to some encoding woes for now don't use it
+            self.depth_sub = self.create_subscription(
+                Image, DEPTH_CAMERA_TOPIC_NAME, self.depth_img_cb, 1)
+        else:
+            self.color_sub = self.create_subscription(
+                Image, COLOR_CAMERA_TOPIC_NAME, self.color_img_cb, 1)
+            self.depth_sub = self.create_subscription(
+                Image, DEPTH_CAMERA_TOPIC_NAME, self.depth_img_cb, 1)
         self.color_info_sub = self.create_subscription(
             CameraInfo, COLOR_CAMERA_INFO_TOPIC_NAME, self.color_img_info_cb, 1)
         self.depth_info_sub = self.create_subscription(
@@ -110,6 +120,16 @@ class CameraCalculator(Node):
         self.depth_img_frame = msg.header.frame_id
         self.depth_img_cv = self.br.imgmsg_to_cv2(msg, "16UC1")
 
+    def color_img_compressed_cb(self, msg):
+        self.color_img_frame = msg.header.frame_id
+        self.color_img_cv = self.br.compressed_imgmsg_to_cv2(msg, "rgb8")
+    
+    def depth_img_compressed_cb(self, msg):
+        # we get problems when trying to use compressed depth images
+        # due to some encoding woes for now don't use it
+        self.depth_img_frame = msg.header.frame_id
+        self.depth_img_cv = self.br.compressed_imgmsg_to_cv2(msg, "passthrough")
+
     def translate_to_world_frame(self, xyz_rgb: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
         """Helper function to translate a pointcloud with rgb data from camera to world frame.
 
@@ -134,6 +154,8 @@ class CameraCalculator(Node):
         if self.color_img_cv is None or self.depth_img_cv is None or self.color_intrinsics is None:
             self.get_logger().error(
                 "color img was none or detph image was none or depth intrinsics was none")
+            self.get_logger().error(
+                f"color img was {self.color_img_cv}, depth image was {self.depth_img_cv }, intrinsics was {self.color_intrinsics}")
             return None
 
         # i think color camera and depth camera are aligned for this camera...
