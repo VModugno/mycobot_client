@@ -138,6 +138,8 @@ class CobotIK(Node):
         self.link_name_to_id = {}
         self.__buildLinkNameToId()
 
+        self.getting_pose = False
+
     def __buildLinkNameToId(self):
         """
         Helper function to populate a datastructure to go from joint name to pybullet joint index.
@@ -181,6 +183,8 @@ class CobotIK(Node):
         Args:
             msg (MycobotAngles): msg from mycobot_msgs_2
         """
+        if self.getting_pose:
+            return
         angles = np.zeros(NUM_ANGLES)
         angles[0] = msg.joint_1
         angles[1] = msg.joint_2
@@ -253,10 +257,12 @@ class CobotIK(Node):
         """
 
         if cur_joint_angles is not None:
+            self.getting_pose = True
             self.update_real_angles(cur_joint_angles)
         joint_id = self.link_name_to_id[target_frame]
         link_state = self.pybullet_client.getLinkState(
             self.bot_pybullet, joint_id, computeForwardKinematics=True)
+        self.getting_pose = False
 
         linkWorldPosition = link_state[0]
         linkWorldOrientation = link_state[1]
