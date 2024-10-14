@@ -347,13 +347,14 @@ class CobotIK(Node):
 
 
     def calculate_ik(self, target_position: npt.NDArray[float], euler_angles_degrees: Optional[npt.NDArray[float]] = None,
-                     target_frame: Optional[str] = None) -> npt.NDArray[float]:
+                     target_frame: Optional[str] = None, pybullet_max_iterations: int = 40) -> npt.NDArray[float]:
         """calculate what angles the robot joints should have to reach the targets. Takes angles in degrees.
 
         Args:
             target_position (npt.NDArray[float]): x, y, z
             euler_angles_degrees (Optional[npt.NDArray[float]], optional): rx, ry, rz, or None. Easier to solve if None. Defaults to None.
             target_frame (Optional[str], optional): what frame to use for the calcs. Defaults to None.
+            target_frame (Optional[int], optional): pybullet uses a numerical method to solve, how long should we let it iterate?
 
         Returns:
             npt.NDArray[float]: the joint angles
@@ -380,7 +381,7 @@ class CobotIK(Node):
                                                                                ori_des_quat,
                                                                                lowerLimits=joint_limits[:, 0],
                                                                                upperLimits=joint_limits[:, 1],
-                                                                               maxNumIterations=40)
+                                                                               maxNumIterations=pybullet_max_iterations)
         joint_poses_pybullet = np.array(joint_poses_pybullet)
         joint_poses_pybullet = RADIAN_TO_DEGREES * joint_poses_pybullet
         self.get_logger().debug("pybullet poses")
