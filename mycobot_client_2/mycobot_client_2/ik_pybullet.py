@@ -52,8 +52,8 @@ JOINT_SIGNS = [1, 1, 1, 1, 1, 1]
 # (6, b'joint6_to_joint5', 0, 11, 10, 1, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint6', (0.0, 0.0, 1.0), (0.0, -0.07318, 0.01678), (0.49999999999662686, -0.49999999999662686, 0.5000018366025517, -0.49999816339744835), 5)
 # (7, b'joint6output_to_joint6', 0, 12, 11, 1, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint6_flange', (0.0, 0.0, 1.0), (0.0, 0.0456, 0.019), (0.7071080798594737, 0.0, 0.0, 0.7071054825112363), 6)
 # (8, b'joint6output_to_gripper', 4, -1, -1, 0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, b'gripper', (0.0, 0.0, 0.0), (0.0, 0.0, 0.10600000000000001), (0.0, 0.0, 0.0, 1.0), 7)
-JOINT_NAMES = ["joint2", "joint3", "joint4",
-               "joint5", "joint6", "joint6_flange"]
+JOINT_NAMES = ["joint2_to_joint1", "joint3_to_joint2", "joint4_to_joint3",
+               "joint5_to_joint4", "joint6_to_joint5", "joint6output_to_joint6"]
 
 
 class CobotIK(Node):
@@ -136,6 +136,7 @@ class CobotIK(Node):
         self.pybullet_client.resetBasePositionAndOrientation(
             self.bot_pybullet, [0, 0, 0], [0, 0, 0, 1])
         self.link_name_to_id = {}
+        self.joint_name_to_id = {}
         self.__buildLinkNameToId()
 
         self.getting_pose = False
@@ -148,9 +149,15 @@ class CobotIK(Node):
         self.link_name_to_id = {}
         for i in range(num_joints):
             joint_info = self.pybullet_client.getJointInfo(self.bot_pybullet, i)
+            joint_index = joint_info[0]
+            joint_name = joint_info[1].decode(
+                "UTF-8")
+            link_name = joint_info[12].decode(
+                "UTF-8")
+            parent_link_index = joint_info[16]
             self.get_logger().info(str(joint_info))
-            self.link_name_to_id[joint_info[12].decode(
-                "UTF-8")] = joint_info[0]
+            self.link_name_to_id[link_name] = joint_index
+            self.joint_name_to_id[joint_name] = joint_index
 
     def update_pybullet(self, angles: npt.NDArray[float]):
         """Helper function to update the joint positions in pybullet given the joint angles that the robot is at.
@@ -160,7 +167,7 @@ class CobotIK(Node):
         """
         for i in range(len(angles)):
             joint_name = JOINT_NAMES[i]
-            joint_id = self.link_name_to_id[joint_name]
+            joint_id = self.joint_name_to_id[joint_name]
             joint_angle = DEGREES_TO_RADIANS * angles[i] * JOINT_SIGNS[i]
             self.get_logger().debug(
                 f"{joint_name} id {joint_id} to angle {joint_angle}")
@@ -241,7 +248,6 @@ class CobotIK(Node):
         self.set_pose(object_coords[0], object_coords[1], start_z, gripper_orientation[0], gripper_orientation[1], gripper_orientation[2], frame = "gripper")
         time.sleep(7)
         self.object_found_dict.pop(object_id)
-
 
 
     def get_pose(self, cur_joint_angles: Optional[npt.NDArray[float]] = None,
@@ -373,7 +379,8 @@ class CobotIK(Node):
                                                                                target_position,
                                                                                ori_des_quat,
                                                                                lowerLimits=joint_limits[:, 0],
-                                                                               upperLimits=joint_limits[:, 1])
+                                                                               upperLimits=joint_limits[:, 1],
+                                                                               maxNumIterations=40)
         joint_poses_pybullet = np.array(joint_poses_pybullet)
         joint_poses_pybullet = RADIAN_TO_DEGREES * joint_poses_pybullet
         self.get_logger().debug("pybullet poses")
