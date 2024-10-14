@@ -64,6 +64,14 @@ def main(args=None):
         
         command_angles = cobot_ik.calculate_ik(np.array([x, y, z]),
                                                    np.array([rx, ry, rz]), frame)
+        p1, o1 = cobot_ik.get_pose(
+                        cur_joint_angles=command_angles, target_frame=frame)
+        print(f"goal: {np.array([x, y, z]), np.array([rx, ry, rz])}")
+        print("ik would result in: ")
+        print(f"position1 {p1}")
+        print(f"orientation1 {o1}")
+        print(f"goal angles: {command_angles}")
+        print(f"cur angles: {cur_angles}")
         cobot_ik.publish_angles(command_angles)
         if close_gripper:
             cobot_ik.close_gripper()

@@ -52,8 +52,8 @@ JOINT_SIGNS = [1, 1, 1, 1, 1, 1]
 # (6, b'joint6_to_joint5', 0, 11, 10, 1, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint6', (0.0, 0.0, 1.0), (0.0, -0.07318, 0.01678), (0.49999999999662686, -0.49999999999662686, 0.5000018366025517, -0.49999816339744835), 5)
 # (7, b'joint6output_to_joint6', 0, 12, 11, 1, 0.0, 0.0, -3.14, 3.14159, 1000.0, 0.0, b'joint6_flange', (0.0, 0.0, 1.0), (0.0, 0.0456, 0.019), (0.7071080798594737, 0.0, 0.0, 0.7071054825112363), 6)
 # (8, b'joint6output_to_gripper', 4, -1, -1, 0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, b'gripper', (0.0, 0.0, 0.0), (0.0, 0.0, 0.10600000000000001), (0.0, 0.0, 0.0, 1.0), 7)
-JOINT_NAMES = ["joint2", "joint3", "joint4",
-               "joint5", "joint6", "joint6_flange"]
+JOINT_NAMES = ["joint2_to_joint1", "joint3_to_joint2", "joint4_to_joint3",
+               "joint5_to_joint4", "joint6_to_joint5", "joint6output_to_joint6"]
 
 
 class CobotIK(Node):
@@ -136,7 +136,10 @@ class CobotIK(Node):
         self.pybullet_client.resetBasePositionAndOrientation(
             self.bot_pybullet, [0, 0, 0], [0, 0, 0, 1])
         self.link_name_to_id = {}
+        self.joint_name_to_id = {}
         self.__buildLinkNameToId()
+
+        self.getting_pose = False
 
     def __buildLinkNameToId(self):
         """
@@ -146,9 +149,15 @@ class CobotIK(Node):
         self.link_name_to_id = {}
         for i in range(num_joints):
             joint_info = self.pybullet_client.getJointInfo(self.bot_pybullet, i)
+            joint_index = joint_info[0]
+            joint_name = joint_info[1].decode(
+                "UTF-8")
+            link_name = joint_info[12].decode(
+                "UTF-8")
+            parent_link_index = joint_info[16]
             self.get_logger().info(str(joint_info))
-            self.link_name_to_id[joint_info[12].decode(
-                "UTF-8")] = joint_info[0]
+            self.link_name_to_id[link_name] = joint_index
+            self.joint_name_to_id[joint_name] = joint_index
 
     def update_pybullet(self, angles: npt.NDArray[float]):
         """Helper function to update the joint positions in pybullet given the joint angles that the robot is at.
@@ -158,7 +167,7 @@ class CobotIK(Node):
         """
         for i in range(len(angles)):
             joint_name = JOINT_NAMES[i]
-            joint_id = self.link_name_to_id[joint_name]
+            joint_id = self.joint_name_to_id[joint_name]
             joint_angle = DEGREES_TO_RADIANS * angles[i] * JOINT_SIGNS[i]
             self.get_logger().debug(
                 f"{joint_name} id {joint_id} to angle {joint_angle}")
@@ -181,6 +190,8 @@ class CobotIK(Node):
         Args:
             msg (MycobotAngles): msg from mycobot_msgs_2
         """
+        if self.getting_pose:
+            return
         angles = np.zeros(NUM_ANGLES)
         angles[0] = msg.joint_1
         angles[1] = msg.joint_2
@@ -239,7 +250,6 @@ class CobotIK(Node):
         self.object_found_dict.pop(object_id)
 
 
-
     def get_pose(self, cur_joint_angles: Optional[npt.NDArray[float]] = None,
                  target_frame: str = "gripper") -> Tuple[npt.NDArray[float], npt.NDArray[float]]:
         """Helper function to get the current pose of the robot from the current angles.
@@ -253,10 +263,12 @@ class CobotIK(Node):
         """
 
         if cur_joint_angles is not None:
+            self.getting_pose = True
             self.update_real_angles(cur_joint_angles)
         joint_id = self.link_name_to_id[target_frame]
         link_state = self.pybullet_client.getLinkState(
             self.bot_pybullet, joint_id, computeForwardKinematics=True)
+        self.getting_pose = False
 
         linkWorldPosition = link_state[0]
         linkWorldOrientation = link_state[1]
@@ -335,13 +347,14 @@ class CobotIK(Node):
 
 
     def calculate_ik(self, target_position: npt.NDArray[float], euler_angles_degrees: Optional[npt.NDArray[float]] = None,
-                     target_frame: Optional[str] = None) -> npt.NDArray[float]:
+                     target_frame: Optional[str] = None, pybullet_max_iterations: int = 40) -> npt.NDArray[float]:
         """calculate what angles the robot joints should have to reach the targets. Takes angles in degrees.
 
         Args:
             target_position (npt.NDArray[float]): x, y, z
             euler_angles_degrees (Optional[npt.NDArray[float]], optional): rx, ry, rz, or None. Easier to solve if None. Defaults to None.
             target_frame (Optional[str], optional): what frame to use for the calcs. Defaults to None.
+            target_frame (Optional[int], optional): pybullet uses a numerical method to solve, how long should we let it iterate?
 
         Returns:
             npt.NDArray[float]: the joint angles
@@ -367,7 +380,8 @@ class CobotIK(Node):
                                                                                target_position,
                                                                                ori_des_quat,
                                                                                lowerLimits=joint_limits[:, 0],
-                                                                               upperLimits=joint_limits[:, 1])
+                                                                               upperLimits=joint_limits[:, 1],
+                                                                               maxNumIterations=pybullet_max_iterations)
         joint_poses_pybullet = np.array(joint_poses_pybullet)
         joint_poses_pybullet = RADIAN_TO_DEGREES * joint_poses_pybullet
         self.get_logger().debug("pybullet poses")
