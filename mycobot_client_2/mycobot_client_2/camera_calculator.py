@@ -66,16 +66,25 @@ class CameraCalculator(Node):
     Args:
         Node (_type_): _description_
     """
-    def __init__(self, img_out_dir: str = None, use_compressed: bool = True):
+    def __init__(self, img_out_dir: str = None, use_compressed: bool = False):
+        """_summary_
+
+        Args:
+            img_out_dir (str, optional): we often don't want to display images and block the main thread, and with the python
+                environment popular with our devs, cv2.imshow doesn't work. So we save images to a directory when
+                trying to visualize them. This argument is the directory on the computer.. Defaults to None, which
+                corresponds to ~/img_plots.
+            use_compressed (bool, optional): whether to read from compressed topics. The RGB cam can be read at ~50HZ, the depth
+                cam at 11HZ with this set to True, but this class makes no effort to time synchronize the images so this 
+                exposes the risk that you will get a wrong image pair. Defaults to False.
+        """
         super().__init__('camera_calculator_node')
         self.br = CvBridge()
         if use_compressed:
             self.color_sub = self.create_subscription(
                 CompressedImage, COLOR_CAMERA_COMPRESSED_TOPIC_NAME, self.color_img_compressed_cb, 1)
-            # we get problems when trying to use compressed depth images
-            # due to some encoding woes for now don't use it
             self.depth_sub = self.create_subscription(
-                Image, DEPTH_CAMERA_TOPIC_NAME, self.depth_img_cb, 1)
+                CompressedImage, DEPTH_CAMERA_COMPRESSED_TOPIC_NAME, self.depth_img_compressed_cb, 1)
         else:
             self.color_sub = self.create_subscription(
                 Image, COLOR_CAMERA_TOPIC_NAME, self.color_img_cb, 1)
@@ -125,10 +134,14 @@ class CameraCalculator(Node):
         self.color_img_cv = self.br.compressed_imgmsg_to_cv2(msg, "rgb8")
     
     def depth_img_compressed_cb(self, msg):
-        # we get problems when trying to use compressed depth images
-        # due to some encoding woes for now don't use it
+        # https://github.com/ros-perception/vision_opencv/issues/206
         self.depth_img_frame = msg.header.frame_id
-        self.depth_img_cv = self.br.compressed_imgmsg_to_cv2(msg, "passthrough")
+        str_msg = msg.data
+        buf = np.ndarray(shape=(1, len(str_msg)),
+                          dtype=np.uint8, buffer=msg.data)
+        depth_header_size = 12
+        buf = buf[:, depth_header_size:]
+        self.depth_img_cv  = cv2.imdecode(buf, cv2.IMREAD_UNCHANGED)
 
     def translate_to_world_frame(self, xyz_rgb: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
         """Helper function to translate a pointcloud with rgb data from camera to world frame.
@@ -155,7 +168,7 @@ class CameraCalculator(Node):
             self.get_logger().error(
                 "color img was none or detph image was none or depth intrinsics was none")
             self.get_logger().error(
-                f"color img was {self.color_img_cv}, depth image was {self.depth_img_cv }, intrinsics was {self.color_intrinsics}")
+                f"color img was {self.color_img_cv is None}, depth image was {self.depth_img_cv is None}, intrinsics was {self.color_intrinsics is None}")
             return None
 
         # i think color camera and depth camera are aligned for this camera...
