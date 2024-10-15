@@ -128,7 +128,9 @@ class CameraCalculator(Node):
         str_msg = msg.data
         buf = np.ndarray(shape=(1, len(str_msg)),
                           dtype=np.uint8, buffer=msg.data)
-        self.depth_img_cv  = cv2.imdecode(buf, cv2.IMREAD_ANYDEPTH)
+        depth_header_size = 12
+        buf = buf[:, depth_header_size:]
+        self.depth_img_cv  = cv2.imdecode(buf, cv2.IMREAD_UNCHANGED)
 
     def translate_to_world_frame(self, xyz_rgb: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
         """Helper function to translate a pointcloud with rgb data from camera to world frame.
@@ -155,7 +157,7 @@ class CameraCalculator(Node):
             self.get_logger().error(
                 "color img was none or detph image was none or depth intrinsics was none")
             self.get_logger().error(
-                f"color img was {self.color_img_cv}, depth image was {self.depth_img_cv }, intrinsics was {self.color_intrinsics}")
+                f"color img was {self.color_img_cv is None}, depth image was {self.depth_img_cv is None}, intrinsics was {self.color_intrinsics is None}")
             return None
 
         # i think color camera and depth camera are aligned for this camera...

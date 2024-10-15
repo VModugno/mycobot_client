@@ -29,7 +29,6 @@ def main(args=None):
             camera_calculator.get_logger().error("frame was None")
             time.sleep(0.1)
             continue
-
         # TODO: add logic to detect cubes, perhaps by HSV color and finding contours, and publish the coordinates via camera_calculator.publish_object_found
         out_img = cv2.cvtColor(img.color, cv2.COLOR_RGB2HSV)
         found_obj = False
@@ -40,7 +39,7 @@ def main(args=None):
             world_coords = np.array((0.2, 0.2, 0))
             camera_calculator.publish_object_found(world_coords.reshape((3,)))
 
-        camera_calculator.display_image_pair(img.color, out_img)
+        camera_calculator.display_image_pair(img.color, cv2.cvtColor(out_img, cv2.COLOR_HSV2RGB))
 
         rate.sleep()
 
