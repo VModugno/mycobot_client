@@ -72,10 +72,8 @@ class CameraCalculator(Node):
         if use_compressed:
             self.color_sub = self.create_subscription(
                 CompressedImage, COLOR_CAMERA_COMPRESSED_TOPIC_NAME, self.color_img_compressed_cb, 1)
-            # we get problems when trying to use compressed depth images
-            # due to some encoding woes for now don't use it
             self.depth_sub = self.create_subscription(
-                Image, DEPTH_CAMERA_TOPIC_NAME, self.depth_img_cb, 1)
+                CompressedImage, DEPTH_CAMERA_COMPRESSED_TOPIC_NAME, self.depth_img_compressed_cb, 1)
         else:
             self.color_sub = self.create_subscription(
                 Image, COLOR_CAMERA_TOPIC_NAME, self.color_img_cb, 1)
@@ -125,10 +123,12 @@ class CameraCalculator(Node):
         self.color_img_cv = self.br.compressed_imgmsg_to_cv2(msg, "rgb8")
     
     def depth_img_compressed_cb(self, msg):
-        # we get problems when trying to use compressed depth images
-        # due to some encoding woes for now don't use it
+        # https://github.com/ros-perception/vision_opencv/issues/206
         self.depth_img_frame = msg.header.frame_id
-        self.depth_img_cv = self.br.compressed_imgmsg_to_cv2(msg, "passthrough")
+        str_msg = msg.data
+        buf = np.ndarray(shape=(1, len(str_msg)),
+                          dtype=np.uint8, buffer=msg.data)
+        self.depth_img_cv  = cv2.imdecode(buf, cv2.IMREAD_ANYDEPTH)
 
     def translate_to_world_frame(self, xyz_rgb: npt.NDArray[np.float32]) -> npt.NDArray[np.float32]:
         """Helper function to translate a pointcloud with rgb data from camera to world frame.
