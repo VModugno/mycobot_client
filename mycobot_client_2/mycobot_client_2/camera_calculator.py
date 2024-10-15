@@ -66,7 +66,18 @@ class CameraCalculator(Node):
     Args:
         Node (_type_): _description_
     """
-    def __init__(self, img_out_dir: str = None, use_compressed: bool = True):
+    def __init__(self, img_out_dir: str = None, use_compressed: bool = False):
+        """_summary_
+
+        Args:
+            img_out_dir (str, optional): we often don't want to display images and block the main thread, and with the python
+                environment popular with our devs, cv2.imshow doesn't work. So we save images to a directory when
+                trying to visualize them. This argument is the directory on the computer.. Defaults to None, which
+                corresponds to ~/img_plots.
+            use_compressed (bool, optional): whether to read from compressed topics. The RGB cam can be read at ~50HZ, the depth
+                cam at 11HZ with this set to True, but this class makes no effort to time synchronize the images so this 
+                exposes the risk that you will get a wrong image pair. Defaults to False.
+        """
         super().__init__('camera_calculator_node')
         self.br = CvBridge()
         if use_compressed:
