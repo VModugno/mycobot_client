@@ -309,7 +309,7 @@ If you are running client examples and the pybullet window is coming up but with
 To do camera dev, it is often very useful to record rosbag(s).
 
 ```
-ros2 bag record /camera/realsense2_camera_node/color/image_rect_raw /camera/realsense2_camera_node/color/image_rect_raw/camera_info /camera/realsense2_camera_node/depth/image_rect_raw /camera/realsense2_camera_node/depth/image_rect_raw/camera_info /tf_static
+ros2 bag record /camera/realsense2_camera_node/color/image_rect_raw /camera/realsense2_camera_node/color/image_rect_raw/camera_info /camera/realsense2_camera_node/depth/image_rect_raw /camera/realsense2_camera_node/depth/image_rect_raw/camera_info /tf_static /mycobot/angles_goal /mycobot/angles_real /mycobot/gripper_status
 ```
 
 You may then play these bag later and work on dev like camera calibration
