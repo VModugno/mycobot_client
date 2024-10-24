@@ -60,7 +60,7 @@ class CobotIK(Node):
     """
     Class that exposes functions to talk to the robot arm given numpy arrays. It translates these to the needed ros messages. It also calculates IK.
     """
-    def __init__(self, speed: int = 30, object_distance_tol: float = 0.01):
+    def __init__(self, speed: int = 30, object_distance_tol: float = 0.01, visualize: bool = True):
         """Initialize the sim and such.
 
         Args:
@@ -114,8 +114,13 @@ class CobotIK(Node):
             f"share directory {self.package_share_directory}")
 
         # here i need to create the environment and get the robot object
+        mode = None
+        if visualize:
+            mode = pb.GUI
+        else:
+            mode = pb.DIRECT
         self.pybullet_client = bullet_client.BulletClient(
-            connection_mode=pb.GUI)
+                connection_mode=mode)
         self.pybullet_client.configureDebugVisualizer(
             pb.COV_ENABLE_RENDERING, 1)
         self.pybullet_client.setPhysicsEngineParameter(numSolverIterations=30)
