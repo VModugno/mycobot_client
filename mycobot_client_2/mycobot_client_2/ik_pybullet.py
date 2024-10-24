@@ -443,7 +443,7 @@ class CobotIK(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    cobot_ik = CobotIK()
+    cobot_ik = CobotIK(visualize=False)
 
     rclpy.spin(cobot_ik)
 

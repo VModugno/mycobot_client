@@ -30,7 +30,7 @@ OBJECTS_FOUND = {}
 def main(args=None):
     rclpy.init(args=args)
 
-    cobot_ik = CobotIK()
+    cobot_ik = CobotIK(visualize=False)
     # Spin in a separate thread
     thread = threading.Thread(
         target=rclpy.spin, args=(cobot_ik, ), daemon=True)

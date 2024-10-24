@@ -45,7 +45,7 @@ def do_dampened_pseudo_inverse(matrix, dampening_factor):
 
 
 class CobotIK(Node):
-    def __init__(self):
+    def __init__(self, visualize: bool = False):
         super().__init__('mycobot_ik_client')
 
         self.cmd_angle_pub = self.create_publisher(
@@ -85,7 +85,7 @@ class CobotIK(Node):
             f"share directory {self.package_share_directory}")
         # Initialize simulation interface
         self.sim = pb.SimInterface(
-            self.conf_file_name, conf_file_path_ext=self.package_share_directory)
+            self.conf_file_name, conf_file_path_ext=self.package_share_directory, use_gui=visualize)
 
         # Define the source for dynamic modeling
         self.source_names = ["pybullet"]
@@ -355,7 +355,7 @@ class CobotIK(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    cobot_ik = CobotIK()
+    cobot_ik = CobotIK(visualize=False)
 
     rclpy.spin(cobot_ik)
 
