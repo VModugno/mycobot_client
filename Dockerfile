@@ -4,10 +4,9 @@ FROM ros:humble-ros-base
 
 # libgl1 is hidden dep of opencv-python
 RUN apt update && apt install nano git ros-humble-pinocchio ros-humble-image-transport ros-humble-compressed-image-transport python3-colcon-common-extensions libgl1 python3-pip -y
+RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
 
-RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
-
-RUN pip install pybullet==3.1.0 robot_descriptions opencv-python  git+https://github.com/VModugno/simulation_and_control/
+RUN pip install pybullet==3.1.0 robot_descriptions matplotlib opencv-python  git+https://github.com/VModugno/simulation_and_control/
 
 RUN mkdir -p /stale_workspace/src
 WORKDIR /stale_workspace
