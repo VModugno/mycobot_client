@@ -6,9 +6,10 @@ FROM ros:humble-ros-base
 RUN apt update && apt install nano git ros-humble-pinocchio ros-humble-image-transport ros-humble-compressed-image-transport python3-colcon-common-extensions libgl1 python3-pip -y
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
 
+# building pybullet freezes the raspberrypi so manually limit parallelization
 RUN git clone --depth 1 --branch 3.25 https://github.com/bulletphysics/bullet3/
 WORKDIR /bullet3
-RUN sed -i 's/N = 2 * multiprocessing.cpu_count()  # number of parallel compilations/N = 3/g' setup.py
+RUN sed -i 's/.*multiprocessing.cpu_count.*/  N = 1/' setup.py
 RUN pip install .
 
 WORKDIR /
