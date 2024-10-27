@@ -21,7 +21,7 @@ def main(args=None):
         target=rclpy.spin, args=(camera_calculator, ), daemon=True)
     thread.start()
 
-    rate = camera_calculator.create_rate(1)
+    rate = camera_calculator.create_rate(0.33)
 
     while rclpy.ok():
         img = camera_calculator.get_images()
