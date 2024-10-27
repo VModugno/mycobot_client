@@ -66,7 +66,7 @@ class CameraCalculator(Node):
     Args:
         Node (_type_): _description_
     """
-    def __init__(self, img_out_dir: str = None, use_compressed: bool = False):
+    def __init__(self, img_out_dir: str = None, use_compressed: bool = False, publish_pointcloud: bool = True):
         """_summary_
 
         Args:
@@ -77,6 +77,8 @@ class CameraCalculator(Node):
             use_compressed (bool, optional): whether to read from compressed topics. The RGB cam can be read at ~50HZ, the depth
                 cam at 11HZ with this set to True, but this class makes no effort to time synchronize the images so this 
                 exposes the risk that you will get a wrong image pair. Defaults to False.
+            publish_pointcloud (bool, optional): whether to convert an image pair to a pointcloud, include this in the output,
+                and publish it. This takes additional computer resources.
         """
         super().__init__('camera_calculator_node')
         self.br = CvBridge()
@@ -94,8 +96,10 @@ class CameraCalculator(Node):
             CameraInfo, COLOR_CAMERA_INFO_TOPIC_NAME, self.color_img_info_cb, 1)
         self.depth_info_sub = self.create_subscription(
             CameraInfo, DEPTH_CAMERA_INFO_TOPIC_NAME, self.depth_img_info_cb, 1)
-        self.pcd_publisher = self.create_publisher(
-            PointCloud2, POINTCLOUD_TOPIC_NAME, 1)
+        self.publish_pointcloud = publish_pointcloud
+        if self.publish_pointcloud:
+            self.pcd_publisher = self.create_publisher(
+                PointCloud2, POINTCLOUD_TOPIC_NAME, 1)
         self.object_publisher = self.create_publisher(Point, OBJECT_FOUND_TOPIC, 1)
 
         self.color_img_frame = None
@@ -183,14 +187,14 @@ class CameraCalculator(Node):
         intrinsics = self.color_intrinsics
         img = Images(self.color_img_cv, self.depth_img_cv,
                      intrinsics, None, None)
-
-        xyz_rgb_camera = self.get_3d_points(img.color, img.depth, intrinsics)
-        xyz_rgb_world_frame = self.translate_to_world_frame(xyz_rgb_camera)
-        img.xyz_rgb = xyz_rgb_world_frame
-        img.xyz_rgb_frame = WORLD_FRAME_ID
-        pointcloud = self.points_to_pountcloud(
-            xyz_rgb_world_frame, WORLD_FRAME_ID)
-        self.pcd_publisher.publish(pointcloud)
+        if self.publish_pointcloud:
+            xyz_rgb_camera = self.get_3d_points(img.color, img.depth, intrinsics)
+            xyz_rgb_world_frame = self.translate_to_world_frame(xyz_rgb_camera)
+            img.xyz_rgb = xyz_rgb_world_frame
+            img.xyz_rgb_frame = WORLD_FRAME_ID
+            pointcloud = self.points_to_pountcloud(
+                xyz_rgb_world_frame, WORLD_FRAME_ID)
+            self.pcd_publisher.publish(pointcloud)
 
         return img
 

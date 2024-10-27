@@ -336,6 +336,7 @@ class CobotIK(Node):
                                    step_size, dampening_factor, initial_guess_is_cur_pos, max_iterations, use_pybullet)
 
         if angles is None:
+            self.get_logger().error(f"couldn't calculate angles for position {position}, orientation {euler_angles_degrees}")
             return
 
         adjusted_angles = self.adjust_angles(angles)
