@@ -66,7 +66,7 @@ class CameraCalculator(Node):
     Args:
         Node (_type_): _description_
     """
-    def __init__(self, img_out_dir: str = None, use_compressed: bool = False, publish_pointcloud: bool = True):
+    def __init__(self, img_out_dir: str = None, use_compressed: bool = True, publish_pointcloud: bool = False):
         """_summary_
 
         Args:
