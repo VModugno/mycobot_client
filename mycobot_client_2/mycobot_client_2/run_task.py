@@ -63,7 +63,7 @@ def main(args=None):
         # TODO: modify the below code to use your datastructure and pick up the cube and deposit it at known positions
         
         command_angles = cobot_ik.calculate_ik(np.array([x, y, z]),
-                                                   np.array([rx, ry, rz]), frame)
+                                                   np.array([rx, ry, rz]), frame, pybullet_max_iterations = 100)
         p1, o1 = cobot_ik.get_pose(
                         cur_joint_angles=command_angles, target_frame=frame)
         print(f"goal: {np.array([x, y, z]), np.array([rx, ry, rz])}")
